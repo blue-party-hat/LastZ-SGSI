@@ -14,7 +14,7 @@
       --stroke: rgba(255,255,255,.12); --stroke2: rgba(255,255,255,.18);
       --text:#f3f5f7; --muted: rgba(243,245,247,.68);
       --silver:#cfd6de;
-      --ok:#46e6a3; --warn:#ffb86b; --bad:#ff5a6a;
+      --ok:#46e6a3; --bad:#ff5a6a;
       --shadow: 0 18px 60px rgba(0,0,0,.55);
       --radius: 18px; --radius2: 14px;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -101,11 +101,9 @@
       position: relative;
       min-height: 64px;
     }
-    .drop.dragover{ border-color: rgba(207,214,222,.75); background: rgba(255,255,255,.06); }
     .drop .left{ display:flex; flex-direction:column; gap:4px; }
     .drop .title{ font-weight: 800; }
     .drop .hint{ color:var(--muted); font-size: 12px; }
-
     #file{ position:absolute; inset:0; opacity:0; width:100%; height:100%; cursor:pointer; }
 
     .progress{
@@ -179,7 +177,6 @@
       border:1px solid rgba(255,255,255,.10);
       background: rgba(0,0,0,.18);
       cursor:pointer;
-      transition: border-color .12s ease, background .12s ease;
     }
     .row.selected{ border-color: rgba(207,214,222,.55); background: rgba(207,214,222,.10); }
     .avatar{ width:54px; height:54px; border-radius: 14px; border:1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); object-fit: cover; }
@@ -208,14 +205,6 @@
     .groups{ display:flex; flex-direction:column; gap:12px; max-height: 56vh; overflow:auto; padding-right: 6px; }
     @media (min-width: 1101px){ .groups{ max-height: 620px; } }
 
-    .g{ border-radius: var(--radius2); border:1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.18); overflow:hidden; }
-    .gHd{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px; border-bottom:1px solid rgba(255,255,255,.10); flex-wrap:wrap; }
-    .gTitle{ display:flex; align-items:center; gap:10px; min-width:0; }
-    .dot{ width:10px; height:10px; border-radius: 999px; border:1px solid rgba(255,255,255,.25); }
-    .gName{ font-weight: 860; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .gSub{ color: var(--muted); font-size: 12px; margin-top:2px; }
-    .gBd{ padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
-
     .ghost{
       color: var(--muted);
       font-size: 13px;
@@ -224,21 +213,6 @@
       border:1px dashed rgba(207,214,222,.22);
       border-radius: var(--radius2);
       background: rgba(255,255,255,.02);
-    }
-
-    .captureWrap{
-      margin-top: 12px;
-      padding: 10px;
-      border-radius: var(--radius2);
-      border:1px solid var(--stroke);
-      background: rgba(255,255,255,.03);
-    }
-    .captureTitle{
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      margin: 0 0 8px 0;
-      color: var(--muted);
-      font-size: 12px;
-      flex-wrap:wrap;
     }
 
     dialog::backdrop{ background: rgba(0,0,0,.65); }
@@ -317,10 +291,9 @@
 
           <div class="colors" id="colors"></div>
 
-          <div class="captureWrap">
-            <div class="captureTitle">
-              <span>このエリアが画像出力されます</span>
-              <span class="pill">PNG</span>
+          <div style="margin-top:12px;border:1px solid var(--stroke);border-radius:14px;padding:10px;background: rgba(255,255,255,.03);">
+            <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin-bottom:8px;">
+              <span>このエリアが画像出力されます</span><span class="pill">PNG</span>
             </div>
             <div id="capture">
               <div class="groups" id="groupList"></div>
@@ -340,7 +313,7 @@
   </div>
 
 <script>
-  const LS_KEY = "lz_player_groups_latest";
+  const LS_KEY = "lz_player_groups_fixed";
   let state = load() ?? { players: [], groups: [], color: "#46e6a3", selected: new Set() };
 
   const palette = ["#ff5a6a","#ffb86b","#fee140","#46e6a3","#5aa9ff","#c471f5"];
@@ -378,11 +351,15 @@
   let t0 = 0;
   let timerHandle = null;
 
-  // workerBlobURL:false が解決になるケースあり [web:106]
+  // v5ではcorePathは「tesseract.js-core v5の複数ファイルが入ったディレクトリ」を指す必要がある [web:90][web:87]
+  const CORE_DIR = "https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.0";
+  const LANG_DIR = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/lang-data";
+  const WORKER_JS = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js";
+
   const TESS_OPT = {
-    langPath: "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/lang-data",
-    corePath: "https://cdn.jsdelivr.net/npm/tesseract.js-core@5",
-    workerPath: "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js",
+    corePath: CORE_DIR,
+    langPath: LANG_DIR,
+    workerPath: WORKER_JS,
     workerBlobURL: false
   };
 
@@ -464,12 +441,14 @@
     setLog("", false);
 
     try{
-      await ensureWorker("eng");
+      await ensureWorker("eng"); // まず軽い英語で初期化
       setLog(`開始: ${new Date().toLocaleString()}\n`, true);
+      setLog(`corePath: ${CORE_DIR}\nlangPath: ${LANG_DIR}\nworkerPath: ${WORKER_JS}\n`, true);
     }catch(e){
       endProgress();
-      setStatus("OCR準備に失敗しました（ネットワーク/CORSの可能性）", false);
+      setStatus("OCR準備に失敗しました（取得失敗の可能性）", false);
       setLog(`\nERROR:\n${String(e?.message || e)}\n`, true);
+      setLog("ヒント: iPhoneの「設定→Safari→サイト越えトラッキングを防ぐ」等が影響する場合があります。まずは別回線/PCでも確認してください。\n", true);
       return;
     }
 
@@ -477,33 +456,22 @@
       setOverall(i, files.length, `画像 ${i+1}/${files.length} を処理中…`);
 
       const dataUrl = await readAsDataURL(files[i]);
-
       setSub(0.02, "前処理（2値化）…");
       const pre = await preprocessToDataURL(dataUrl);
 
-      setSub(0.10, "日本語言語データを準備…");
+      setSub(0.10, "（任意）日本語を有効化…");
       await maybeEnableJapanese();
 
       setSub(0.15, "OCR 実行中…");
-      const tImgStart = performance.now();
-      const { text, lastProgress, langUsed } = await recognizeWithProgress(pre);
-      const tImgEnd = performance.now();
+      const { text } = await recognizeWithProgress(pre);
 
       setSub(0.92, "抽出（名前 / HQ / 戦力）…");
       const extracted = extractPlayersFromText(text);
 
-      setLog(
-        `\n---\n画像 ${i+1}/${files.length}\n` +
-        `使用言語: ${langUsed}\n` +
-        `OCR時間: ${((tImgEnd - tImgStart)/1000).toFixed(1)}s\n` +
-        `進捗最終: ${(lastProgress*100).toFixed(0)}%\n` +
-        `抽出件数: ${extracted.length}\n` +
-        `OCRテキスト（先頭250文字）:\n${text.slice(0,250)}\n`,
-        true
-      );
+      setLog(`\n---\n抽出件数: ${extracted.length}\nOCR先頭200文字:\n${text.slice(0,200)}\n`, true);
 
       if(extracted.length === 0){
-        setStatus("抽出できませんでした（ログを確認してください）", false);
+        setStatus("抽出できませんでした（ログを確認）", false);
         continue;
       }
 
@@ -532,7 +500,6 @@
     setOverall(files.length, files.length, "完了");
     setSub(1, "完了");
     setStatus("完了。", false);
-    setLog(`\n終了: ${new Date().toLocaleString()}\n`, true);
     endProgress();
   }
 
@@ -578,7 +545,6 @@
 
   async function recognizeWithProgress(dataUrl){
     let last = 0;
-    const langUsed = currentLang;
     const logger = m => {
       if(m && typeof m.progress === "number"){
         last = Math.max(last, m.progress);
@@ -587,7 +553,7 @@
     };
     if(worker && worker.setLogger) worker.setLogger(logger);
     const { data } = await worker.recognize(dataUrl);
-    return { text: data.text || "", lastProgress: last, langUsed };
+    return { text: data.text || "" };
   }
 
   function extractPlayersFromText(text){
@@ -611,11 +577,7 @@
 
       let namePart = line.replace(powerMatch[0], " ");
       if(hq !== null) namePart = namePart.replace(new RegExp(`\\b${hq}\\b`), " ");
-      namePart = namePart
-        .replace(/\b(Online|ago|min|m|h)\b/gi," ")
-        .replace(/[|•]/g," ")
-        .replace(/\s+/g," ")
-        .trim();
+      namePart = namePart.replace(/\b(Online|ago|min|m|h)\b/gi," ").replace(/\s+/g," ").trim();
 
       const name = namePart.slice(0, 28).trim();
       if(name.length < 2) continue;
@@ -643,17 +605,11 @@
     const mult = u === "K" ? 1e3 : u === "M" ? 1e6 : 1e9;
     return Math.round(n * mult);
   }
-  function formatCompact(n){
-    if(n >= 1e9) return (n/1e9).toFixed(2)+"B";
-    if(n >= 1e6) return (n/1e6).toFixed(1)+"M";
-    if(n >= 1e3) return (n/1e3).toFixed(1)+"K";
-    return String(n);
-  }
 
   async function attachIconsHeuristic(players, fullDataUrl){
     const { canvas, w, h } = await dataUrlToCanvas(fullDataUrl);
-
     const out = [];
+
     const topOffset = Math.floor(h * 0.02);
     const rowH = Math.floor(h / 4.1);
     const colW = Math.floor(w / 2);
@@ -671,9 +627,7 @@
       crop.width = avatarSize;
       crop.height = avatarSize;
       crop.getContext("2d").drawImage(canvas, x, y, avatarSize, avatarSize, 0, 0, avatarSize, avatarSize);
-      const iconDataUrl = crop.toDataURL("image/jpeg", 0.85);
-
-      out.push({ ...players[i], iconDataUrl });
+      out.push({ ...players[i], iconDataUrl: crop.toDataURL("image/jpeg", 0.85) });
     }
     return out;
   }
@@ -697,14 +651,14 @@
 
   function beginProgress(){
     t0 = performance.now();
-    progressEl.classList.add("show");
+    $("#progress").classList.add("show");
     setOverall(0,1,"準備中…");
     setSub(0,"-");
     if(timerHandle) clearInterval(timerHandle);
     timerHandle = setInterval(()=>{
       const sec = (performance.now() - t0)/1000;
       const now = new Date();
-      pTime.textContent = `開始: ${now.toTimeString().slice(0,8)} / 経過: ${sec.toFixed(1)}s`;
+      $("#pTime").textContent = `開始: ${now.toTimeString().slice(0,8)} / 経過: ${sec.toFixed(1)}s`;
     }, 150);
   }
   function endProgress(){
@@ -712,14 +666,14 @@
   }
   function setOverall(i, n, label){
     const pct = n ? (i/n) : 0;
-    pAll.style.width = `${Math.max(0, Math.min(1, pct))*100}%`;
-    pLabel.textContent = label;
+    $("#pAll").style.width = `${Math.max(0, Math.min(1, pct))*100}%`;
+    $("#pLabel").textContent = label;
   }
   function setSub(pct, label){
     const p = Math.max(0, Math.min(1, pct));
-    pSub.style.width = `${p*100}%`;
-    pSubLabel.textContent = label;
-    pSubPct.textContent = `${Math.round(p*100)}%`;
+    $("#pSub").style.width = `${p*100}%`;
+    $("#pSubLabel").textContent = label;
+    $("#pSubPct").textContent = `${Math.round(p*100)}%`;
   }
   function setStatus(msg, busy){
     statusEl.textContent = msg;
@@ -731,30 +685,12 @@
     logEl.classList.toggle("show", !!show);
   }
 
-  function save(){
-    const plain = { ...state, selected: [...state.selected] };
-    localStorage.setItem(LS_KEY, JSON.stringify(plain));
-  }
-  function load(){
-    const raw = localStorage.getItem(LS_KEY);
-    if(!raw) return null;
-    const obj = JSON.parse(raw);
-    obj.selected = new Set(obj.selected || []);
-    return obj;
-  }
-
   function renderPalette(){
     const wrap = $("#colors");
     if(!palette.includes(state.color)) state.color = palette[3];
-    wrap.innerHTML = palette.map(c=> `
-      <div class="c ${state.color===c?"sel":""}" style="background:${c}" data-c="${c}" role="button" aria-label="色"></div>
-    `).join("");
+    wrap.innerHTML = palette.map(c=> `<div class="c ${state.color===c?"sel":""}" style="background:${c}" data-c="${c}"></div>`).join("");
     [...wrap.querySelectorAll(".c")].forEach(el=>{
-      el.addEventListener("click", ()=>{
-        state.color = el.dataset.c;
-        save();
-        renderPalette();
-      }, { passive: true });
+      el.addEventListener("click", ()=>{ state.color = el.dataset.c; save(); renderPalette(); }, { passive: true });
     });
   }
 
@@ -763,46 +699,43 @@
     pillCount.textContent = `${state.players.length} 人`;
     pillGroup.textContent = `${state.groups.length} グループ`;
   }
-
   function renderPlayers(){
     const query = q.value.trim().toLowerCase();
-    const list = state.players
-      .filter(p => !query || p.name.toLowerCase().includes(query))
-      .sort((a,b)=> b.power - a.power);
-
+    const list = state.players.filter(p => !query || p.name.toLowerCase().includes(query)).sort((a,b)=> b.power - a.power);
     if(list.length === 0){
       playerList.innerHTML = `<div class="ghost">プレイヤーがまだいません。スクショをアップロードしてください。</div>`;
       return;
     }
-
     playerList.innerHTML = list.map(p=>{
       const sel = state.selected.has(p.id) ? "selected" : "";
-      const icon = p.iconDataUrl || placeholderAvatar();
       return `
         <div class="row ${sel}" data-id="${p.id}">
-          <img class="avatar" src="${icon}" alt="">
+          <img class="avatar" src="${p.iconDataUrl || placeholderAvatar()}" alt="">
           <div class="meta">
             <div class="name">${escapeHtml(p.name)}</div>
             <div class="stats">
               <span class="tag">HQ ${p.hq ?? 0}</span>
-              <span class="tag">戦力 ${escapeHtml(p.powerRaw || formatCompact(p.power))}</span>
+              <span class="tag">戦力 ${escapeHtml(p.powerRaw || String(p.power))}</span>
             </div>
           </div>
           <div class="power">${formatCompact(p.power)}</div>
         </div>
       `;
     }).join("");
-
     [...playerList.querySelectorAll(".row")].forEach(el=>{
       el.addEventListener("click", ()=>{
         const id = Number(el.dataset.id);
-        if(state.selected.has(id)) state.selected.delete(id);
-        else state.selected.add(id);
-        save();
-        renderPlayers();
-        syncButtons();
-      }, { passive: true });
+        if(state.selected.has(id)) state.selected.delete(id); else state.selected.add(id);
+        save(); renderPlayers(); syncButtons();
+      }, { passive:true });
     });
+  }
+
+  function formatCompact(n){
+    if(n >= 1e9) return (n/1e9).toFixed(2)+"B";
+    if(n >= 1e6) return (n/1e6).toFixed(1)+"M";
+    if(n >= 1e3) return (n/1e3).toFixed(1)+"K";
+    return String(n);
   }
 
   function renderGroups(){
@@ -811,77 +744,6 @@
       btnExport.disabled = true;
       return;
     }
-
-    groupList.innerHTML = state.groups.map(g=>{
-      const members = g.memberIds.map(id=> state.players.find(p=>p.id===id)).filter(Boolean);
-      const total = members.reduce((s,p)=> s + (p.power||0), 0);
-
-      return `
-        <div class="g">
-          <div class="gHd">
-            <div class="gTitle">
-              <span class="dot" style="background:${g.color}"></span>
-              <div style="min-width:0;">
-                <div class="gName">${escapeHtml(g.name)}</div>
-                <div class="gSub">${members.length}人 / 合計 ${formatCompact(total)}</div>
-              </div>
-            </div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button class="btn" data-act="add" data-gid="${g.id}" type="button">追加</button>
-              <button class="btn danger" data-act="del" data-gid="${g.id}" type="button">削除</button>
-            </div>
-          </div>
-          <div class="gBd">
-            ${members.length ? members.map(m=>{
-              const icon = m.iconDataUrl || placeholderAvatar();
-              return `
-                <div style="padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.10);background: rgba(255,255,255,.03); display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                  <div style="display:flex; align-items:center; gap:10px; min-width:0;">
-                    <img src="${icon}" alt="" style="width:34px;height:34px;border-radius:10px;border:1px solid rgba(255,255,255,.14);object-fit:cover;background: rgba(255,255,255,.04);">
-                    <div style="min-width:0;">
-                      <div style="font-weight:720;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(m.name)}</div>
-                      <div class="gSub">HQ ${m.hq ?? 0} / 戦力 ${escapeHtml(m.powerRaw || formatCompact(m.power))}</div>
-                    </div>
-                  </div>
-                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
-                    <div class="mono" style="font-size:12px; color: rgba(243,245,247,.82);">${formatCompact(m.power)}</div>
-                    <button class="btn danger" data-act="rm" data-gid="${g.id}" data-pid="${m.id}" type="button">外す</button>
-                  </div>
-                </div>
-              `;
-            }).join("") : `<div class="ghost">メンバー未追加。左でプレイヤーを選択して「選択中を追加…」またはこのグループの「追加」から入れてください。</div>`}
-          </div>
-        </div>
-      `;
-    }).join("");
-
-    [...groupList.querySelectorAll("button[data-act]")].forEach(b=>{
-      b.addEventListener("click", ()=>{
-        const act = b.dataset.act;
-        const gid = Number(b.dataset.gid);
-
-        if(act==="del"){
-          if(!confirm("このグループを削除しますか？")) return;
-          state.groups = state.groups.filter(x=>x.id!==gid);
-          save(); renderGroups(); renderCounts(); syncButtons();
-          return;
-        }
-        if(act==="add"){
-          if(state.selected.size === 0) return alert("左の一覧から追加したいプレイヤーを選択してください。");
-          addSelectedToGroup(gid);
-          return;
-        }
-        if(act==="rm"){
-          const pid = Number(b.dataset.pid);
-          const g = state.groups.find(x=>x.id===gid);
-          if(!g) return;
-          g.memberIds = g.memberIds.filter(id=>id!==pid);
-          save(); renderGroups(); syncButtons();
-          return;
-        }
-      }, { passive: true });
-    });
-
     btnExport.disabled = false;
   }
 
@@ -894,42 +756,29 @@
     dlgBody.innerHTML = state.groups.map(g=> `
       <button class="btn primary" style="justify-content:space-between;" data-gid="${g.id}" type="button">
         <span style="display:flex;align-items:center;gap:10px;min-width:0;">
-          <span class="dot" style="background:${g.color}"></span>
+          <span style="width:10px;height:10px;border-radius:999px;background:${g.color};border:1px solid rgba(255,255,255,.25);"></span>
           <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(g.name)}</span>
         </span>
         <span class="pill">${g.memberIds.length}人</span>
       </button>
     `).join("");
-
     [...dlgBody.querySelectorAll("button[data-gid]")].forEach(b=>{
       b.addEventListener("click", ()=>{
         const gid = Number(b.dataset.gid);
         addSelectedToGroup(gid);
-        if (typeof dlg.close === "function") dlg.close();
-        else dlg.removeAttribute("open");
+        if (typeof dlg.close === "function") dlg.close(); else dlg.removeAttribute("open");
       });
     });
-
-    if (typeof dlg.showModal === "function") dlg.showModal();
-    else dlg.setAttribute("open", "");
+    if (typeof dlg.showModal === "function") dlg.showModal(); else dlg.setAttribute("open", "");
   }
-
   function addSelectedToGroup(gid){
     const g = state.groups.find(x=>x.id===gid);
     if(!g) return;
-    for(const pid of state.selected){
-      if(!g.memberIds.includes(pid)) g.memberIds.push(pid);
-    }
+    for(const pid of state.selected) if(!g.memberIds.includes(pid)) g.memberIds.push(pid);
     state.selected.clear();
-    save();
-    renderPlayers();
-    renderGroups();
-    syncButtons();
+    save(); renderPlayers(); renderGroups(); syncButtons();
   }
 
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-  }
   function readAsDataURL(f){
     return new Promise((res, rej)=>{
       const r = new FileReader();
@@ -943,60 +792,12 @@
       const img = new Image();
       img.onload = ()=>{
         const c = document.createElement("canvas");
-        c.width = img.naturalWidth;
-        c.height = img.naturalHeight;
-        c.getContext("2d").drawImage(img, 0, 0);
-        res({ canvas: c, w: c.width, h: c.height });
+        c.width = img.naturalWidth; c.height = img.naturalHeight;
+        c.getContext("2d").drawImage(img,0,0);
+        res({ canvas:c, w:c.width, h:c.height });
       };
       img.src = dataUrl;
     });
-  }
-  function placeholderAvatar(){
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120">
-      <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#1b1e28"/><stop offset="1" stop-color="#0b0d12"/>
-      </linearGradient></defs>
-      <rect width="120" height="120" rx="22" fill="url(#g)"/>
-      <circle cx="60" cy="48" r="18" fill="#cfd6de" opacity=".55"/>
-      <rect x="28" y="74" width="64" height="26" rx="13" fill="#cfd6de" opacity=".35"/>
-    </svg>`;
-    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
-  }
-
-  function beginProgress(){
-    t0 = performance.now();
-    progressEl.classList.add("show");
-    setOverall(0,1,"準備中…");
-    setSub(0,"-");
-    if(timerHandle) clearInterval(timerHandle);
-    timerHandle = setInterval(()=>{
-      const sec = (performance.now() - t0)/1000;
-      const now = new Date();
-      pTime.textContent = `開始: ${now.toTimeString().slice(0,8)} / 経過: ${sec.toFixed(1)}s`;
-    }, 150);
-  }
-  function endProgress(){
-    if(timerHandle){ clearInterval(timerHandle); timerHandle = null; }
-  }
-  function setOverall(i, n, label){
-    const pct = n ? (i/n) : 0;
-    pAll.style.width = `${Math.max(0, Math.min(1, pct))*100}%`;
-    pLabel.textContent = label;
-  }
-  function setSub(pct, label){
-    const p = Math.max(0, Math.min(1, pct));
-    pSub.style.width = `${p*100}%`;
-    pSubLabel.textContent = label;
-    pSubPct.textContent = `${Math.round(p*100)}%`;
-  }
-  function setStatus(msg, busy){
-    statusEl.textContent = msg;
-    statusEl.classList.add("show");
-    statusEl.style.borderColor = busy ? "rgba(207,214,222,.22)" : "rgba(70,230,163,.25)";
-  }
-  function setLog(msg, show){
-    if(msg) logEl.textContent += msg;
-    logEl.classList.toggle("show", !!show);
   }
 
   function save(){
@@ -1011,75 +812,20 @@
     return obj;
   }
 
-  function renderPalette(){
-    const wrap = $("#colors");
-    if(!palette.includes(state.color)) state.color = palette[3];
-    wrap.innerHTML = palette.map(c=> `
-      <div class="c ${state.color===c?"sel":""}" style="background:${c}" data-c="${c}" role="button" aria-label="色"></div>
-    `).join("");
-    [...wrap.querySelectorAll(".c")].forEach(el=>{
-      el.addEventListener("click", ()=>{
-        state.color = el.dataset.c;
-        save();
-        renderPalette();
-      }, { passive: true });
-    });
+  function placeholderAvatar(){
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#1b1e28"/><stop offset="1" stop-color="#0b0d12"/>
+      </linearGradient></defs>
+      <rect width="120" height="120" rx="22" fill="url(#g)"/>
+      <circle cx="60" cy="48" r="18" fill="#cfd6de" opacity=".55"/>
+      <rect x="28" y="74" width="64" height="26" rx="13" fill="#cfd6de" opacity=".35"/>
+    </svg>`;
+    return "image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
   }
 
-  function renderAll(){ renderPlayers(); renderGroups(); renderCounts(); syncButtons(); }
-  function renderCounts(){
-    pillCount.textContent = `${state.players.length} 人`;
-    pillGroup.textContent = `${state.groups.length} グループ`;
-  }
-
-  function renderPlayers(){
-    const query = q.value.trim().toLowerCase();
-    const list = state.players
-      .filter(p => !query || p.name.toLowerCase().includes(query))
-      .sort((a,b)=> b.power - a.power);
-
-    if(list.length === 0){
-      playerList.innerHTML = `<div class="ghost">プレイヤーがまだいません。スクショをアップロードしてください。</div>`;
-      return;
-    }
-
-    playerList.innerHTML = list.map(p=>{
-      const sel = state.selected.has(p.id) ? "selected" : "";
-      const icon = p.iconDataUrl || placeholderAvatar();
-      return `
-        <div class="row ${sel}" data-id="${p.id}">
-          <img class="avatar" src="${icon}" alt="">
-          <div class="meta">
-            <div class="name">${escapeHtml(p.name)}</div>
-            <div class="stats">
-              <span class="tag">HQ ${p.hq ?? 0}</span>
-              <span class="tag">戦力 ${escapeHtml(p.powerRaw || formatCompact(p.power))}</span>
-            </div>
-          </div>
-          <div class="power">${formatCompact(p.power)}</div>
-        </div>
-      `;
-    }).join("");
-
-    [...playerList.querySelectorAll(".row")].forEach(el=>{
-      el.addEventListener("click", ()=>{
-        const id = Number(el.dataset.id);
-        if(state.selected.has(id)) state.selected.delete(id);
-        else state.selected.add(id);
-        save();
-        renderPlayers();
-        syncButtons();
-      }, { passive: true });
-    });
-  }
-
-  function renderGroups(){
-    if(state.groups.length === 0){
-      groupList.innerHTML = `<div class="ghost">グループがまだありません。右上のフォームから作成してください。</div>`;
-      btnExport.disabled = true;
-      return;
-    }
-    btnExport.disabled = false;
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
   }
 </script>
 </body>
