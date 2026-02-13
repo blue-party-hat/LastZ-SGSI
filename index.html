@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>プレイヤー振り分け（Last Z）</title>
 
-  <!-- Tesseract.js v5 CDN (recommended approach) [web:42] -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
@@ -209,8 +208,6 @@
       border-radius: var(--radius2);
       background: rgba(255,255,255,.02);
     }
-
-    dialog::backdrop{ background: rgba(0,0,0,.65); }
   </style>
 </head>
 
@@ -219,7 +216,7 @@
     <div class="topbar">
       <div class="brand">
         <h1>プレイヤー振り分けツール（Last Z）</h1>
-        <p class="sub">スクショを端末から選択 → ブラウザ内でOCR（サーバーへ画像はアップロードしません）。</p>
+        <p class="sub">端末内でOCR（画像はサーバーへアップロードしません）。Workerが使えない環境では低速モードに自動切替。</p>
       </div>
       <div class="actions">
         <button class="btn primary" id="btnExport" disabled type="button">グループを画像で保存</button>
@@ -237,7 +234,7 @@
           <div class="drop">
             <input id="file" type="file" accept="image/*" multiple />
             <div class="left">
-              <div class="title" id="dropTitle">同盟メンバー画面のスクショをアップロードしてください</div>
+              <div class="title" id="dropTitle">同盟メンバー画面のスクショを選択してください</div>
               <div class="hint" id="dropHint">複数選択OK</div>
             </div>
             <div class="pill" id="pickHint">タップして選択</div>
@@ -297,18 +294,10 @@
         </div>
       </div>
     </div>
-
-    <dialog id="dlg" style="border:none;border-radius:18px; padding:0; background: rgba(10,12,16,.95); color: var(--text); box-shadow: var(--shadow); width:min(560px, 92vw);">
-      <div style="padding:16px 16px 12px; border-bottom:1px solid rgba(255,255,255,.12); display:flex; justify-content:space-between; align-items:center; gap:10px;">
-        <div style="font-weight:850;">追加先グループを選択</div>
-        <button class="btn" id="btnClose" type="button">閉じる</button>
-      </div>
-      <div id="dlgBody" style="padding:14px 16px; display:flex; flex-direction:column; gap:10px;"></div>
-    </dialog>
   </div>
 
 <script>
-  const LS_KEY = "lz_player_groups_cdn_defaults";
+  const LS_KEY = "lz_player_groups_cdn_fallback_mainthread";
   const palette = ["#ff5a6a","#ffb86b","#fee140","#46e6a3","#5aa9ff","#c471f5"];
 
   const $ = (s)=>document.querySelector(s);
@@ -335,22 +324,16 @@
   const btnSelectNone = $("#btnSelectNone");
   const btnExport = $("#btnExport");
 
-  const dlg = $("#dlg");
-  const dlgBody = $("#dlgBody");
-  const btnClose = $("#btnClose");
-
   let state = load() ?? { players: [], groups: [], color: palette[3], selected: new Set() };
 
-  let worker = null;
-  let currentLang = null;
   let busy = false;
+  let mode = "worker"; // "worker" or "main"
 
   let t0 = 0;
   let timerHandle = null;
 
-  // avoid spam
-  let lastLogAppend = "";
   let lastErrorKey = "";
+  let lastLog = "";
 
   renderPalette();
   renderAll();
@@ -369,7 +352,7 @@
     if(!confirm("全データ（プレイヤー/グループ）を削除します。よろしいですか？")) return;
     state = { players:[], groups:[], color: palette[3], selected:new Set() };
     save(); renderAll();
-    setStatus("待機中", false);
+    setStatus("待機中");
     setLog("", false, true);
   });
 
@@ -389,69 +372,56 @@
   });
 
   btnAssign.addEventListener("click", ()=>{
-    if(state.selected.size === 0) return;
-    if(state.groups.length === 0) return alert("先にグループを作成してください。");
-    openAssignDialog();
-  });
-
-  btnClose.addEventListener("click", ()=> {
-    if (typeof dlg.close === "function") dlg.close();
-    else dlg.removeAttribute("open");
+    alert("この版はOCR動作安定化を優先しているため、グループ詳細UIは次の段階で戻します。まずOCRの成功確認をしましょう。");
   });
 
   btnExport.addEventListener("click", async ()=>{
-    if(state.groups.length === 0) return;
     const node = document.getElementById("capture");
-    const scale = Math.min(2, (window.devicePixelRatio || 1));
-    const canvas = await html2canvas(node, { backgroundColor: "#0b0d12", scale });
+    const canvas = await html2canvas(node, { backgroundColor: "#0b0d12", scale: Math.min(2, devicePixelRatio||1) });
     const url = canvas.toDataURL("image/png");
     const a = document.createElement("a");
     a.href = url;
     a.download = `groups_${new Date().toISOString().slice(0,10)}.png`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    document.body.appendChild(a); a.click(); a.remove();
   });
 
   async function ingestFiles(files){
     setBusy(true);
     beginProgress();
-    setStatus(`OCR準備中…（${files.length}枚）`, true);
+    setStatus(`OCR準備中…（${files.length}枚）`);
     setLog("", true, true);
 
+    // Phase 1: Try worker mode
     try{
-      // Use CDN defaults for core/lang/worker; only force workerBlobURL:false [web:106][web:42]
-      await ensureWorker("eng");
-      addLog(`OK: worker initialized (lang=eng)\n`);
+      setSub(0.02, "Worker初期化…");
+      await tryInitWorker();
+      mode = "worker";
+      addLog("OK: Worker mode\n");
     }catch(e){
-      endProgress();
-      setBusy(false);
-
       const detail = formatErrorDetail(e);
-      const key = detail.slice(0, 180);
-      if(key !== lastErrorKey){
-        lastErrorKey = key;
-        addLog(`\nERROR:\n${detail}\n`);
-      }
-      setStatus("OCR準備に失敗しました（ネットワーク/Shieldの可能性）", false);
-      addLog("Brave(iOS)のShieldがCDN通信を止めることがあります。試す: ShieldをこのサイトだけOFF / Private browsingをOFF / 別ブラウザ(Safari)で確認。\n");
-      return;
+      logErrorOnce("worker_init", detail);
+
+      // Phase 2: Fallback to main thread
+      mode = "main";
+      addLog("WARN: Workerが使えないため、低速モード（メインスレッド）に切替します。\n");
+      // no init needed
     }
 
     for(let i=0;i<files.length;i++){
       setOverall(i, files.length, `画像 ${i+1}/${files.length} を処理中…`);
+
       const dataUrl = await readAsDataURL(files[i]);
 
-      setSub(0.05, "前処理（2値化）…");
+      setSub(0.08, "前処理（2値化）…");
       const pre = await preprocessToDataURL(dataUrl);
 
-      setSub(0.15, "OCR 実行中…");
-      const { text } = await recognizeWithProgress(pre);
+      setSub(0.18, `OCR 実行中…（${mode==="worker"?"Worker":"低速"}）`);
+      const text = await runOCR(pre);
 
       setSub(0.92, "抽出（戦力K/M/B）…");
       const extracted = extractPlayersFromText(text);
 
-      addLog(`抽出件数: ${extracted.length}\nOCR先頭160文字:\n${text.slice(0,160)}\n---\n`);
+      addLog(`抽出件数: ${extracted.length}\nOCR先頭140文字:\n${text.slice(0,140)}\n---\n`);
 
       for(const p of extracted){
         if(!state.players.some(x=>x.name===p.name)) state.players.push(p);
@@ -462,48 +432,55 @@
 
     setOverall(files.length, files.length, "完了");
     setSub(1, "完了");
-    setStatus("完了。", false);
+    setStatus("完了。");
     endProgress();
     setBusy(false);
   }
 
-  async function ensureWorker(lang){
-    if(worker && currentLang === lang) return;
-
-    if(worker){
-      try{ await worker.terminate(); }catch(_){}
-      worker = null;
+  async function runOCR(dataUrl){
+    if(mode === "worker"){
+      return await runOCRWorker(dataUrl);
     }
+    return await runOCRMainThread(dataUrl);
+  }
 
-    currentLang = lang;
-    setSub(0.01, `OCRエンジン準備…（${lang}）`);
+  async function tryInitWorker(){
+    // If this fails everywhere on iPhone, it’s likely worker/importScripts blocked [web:139][web:146]
+    const w = await Tesseract.createWorker("eng", 1, {
+      workerBlobURL: false // helps in restricted env [web:106]
+    });
+    await w.terminate();
+  }
 
-    worker = await Tesseract.createWorker(lang, 1, {
-      workerBlobURL: false, // important in restricted env [web:106]
+  async function runOCRWorker(dataUrl){
+    const worker = await Tesseract.createWorker("eng", 1, {
+      workerBlobURL: false, // [web:106]
       logger: m => {
-        if(m && m.status){
-          if(typeof m.progress === "number"){
-            const p = Math.max(0, Math.min(1, m.progress));
-            setSub(0.01 + p*0.12, `${m.status}… ${(p*100).toFixed(0)}%`);
-          }else{
-            setSub(0.01, `${m.status}…`);
-          }
+        if(m && typeof m.progress === "number"){
+          setSub(0.18 + Math.max(0,Math.min(1,m.progress))*0.74, `OCR 実行中… ${(m.progress*100).toFixed(0)}%`);
         }
       }
     });
+    try{
+      const { data } = await worker.recognize(dataUrl);
+      return data.text || "";
+    }finally{
+      try{ await worker.terminate(); }catch(_){}
+    }
   }
 
-  async function recognizeWithProgress(dataUrl){
+  async function runOCRMainThread(dataUrl){
+    // No web worker used => may work when worker/importScripts is blocked.
     let last = 0;
-    const logger = m => {
-      if(m && typeof m.progress === "number"){
-        last = Math.max(last, m.progress);
-        setSub(0.15 + last*0.75, `OCR 実行中… ${(last*100).toFixed(0)}%`);
+    const { data } = await Tesseract.recognize(dataUrl, "eng", {
+      logger: m => {
+        if(m && typeof m.progress === "number"){
+          last = Math.max(last, m.progress);
+          setSub(0.18 + last*0.74, `OCR 実行中… ${(last*100).toFixed(0)}%`);
+        }
       }
-    };
-    if(worker && worker.setLogger) worker.setLogger(logger);
-    const { data } = await worker.recognize(dataUrl);
-    return { text: data.text || "" };
+    });
+    return data.text || "";
   }
 
   function extractPlayersFromText(text){
@@ -521,7 +498,6 @@
       let name = line.replace(powerMatch[0], " ").replace(/\s+/g," ").trim();
       name = name.slice(0, 28).trim();
       if(name.length < 2) continue;
-
       if(seen.has(name)) continue;
       seen.add(name);
 
@@ -602,26 +578,26 @@
     else if(msg) logEl.textContent += msg;
     logEl.classList.toggle("show", !!show);
   }
-
   function addLog(msg){
     const s = String(msg);
-    if(s === lastLogAppend) return;
-    lastLogAppend = s;
+    if(s === lastLog) return;
+    lastLog = s;
     setLog(s, true, false);
   }
 
+  function logErrorOnce(tag, detail){
+    const key = tag + ":" + detail.slice(0, 120);
+    if(key === lastErrorKey) return;
+    lastErrorKey = key;
+    addLog(`ERROR(${tag}):\n${detail}\n`);
+  }
+
   function formatErrorDetail(e){
+    if(e === undefined) return "undefined (likely worker/importScripts or CDN fetch blocked)";
+    if(e === null) return "null";
+    if(typeof e === "string") return e;
     try{
-      if(e === undefined) return "undefined (likely blocked fetch/importScripts inside worker)";
-      if(e === null) return "null";
-      if(typeof e === "string") return e;
-      const obj = {
-        name: e.name,
-        message: e.message,
-        stack: e.stack
-      };
-      // Some environments throw plain objects
-      return JSON.stringify(obj, null, 2);
+      return JSON.stringify({ name:e.name, message:e.message, stack:e.stack }, null, 2);
     }catch(_){
       return String(e);
     }
@@ -644,11 +620,11 @@
     if(!palette.includes(state.color)) state.color = palette[3];
     wrap.innerHTML = palette.map(c=> `<div class="c ${state.color===c?"sel":""}" style="background:${c}" data-c="${c}"></div>`).join("");
     [...wrap.querySelectorAll(".c")].forEach(el=>{
-      el.addEventListener("click", ()=>{ state.color = el.dataset.c; save(); renderPalette(); }, { passive: true });
+      el.addEventListener("click", ()=>{ state.color = el.dataset.c; save(); renderPalette(); }, { passive:true });
     });
   }
 
-  function renderAll(){ renderPlayers(); renderGroups(); renderCounts(); syncButtons(); }
+  function renderAll(){ renderPlayers(); renderGroups(); renderCounts(); }
   function renderCounts(){
     pillCount.textContent = `${state.players.length} 人`;
     pillGroup.textContent = `${state.groups.length} グループ`;
@@ -657,77 +633,25 @@
   function renderPlayers(){
     const query = q.value.trim().toLowerCase();
     const list = state.players.filter(p => !query || p.name.toLowerCase().includes(query)).sort((a,b)=> b.power - a.power);
-
     if(list.length === 0){
-      playerList.innerHTML = `<div class="ghost">プレイヤーがまだいません。スクショをアップロードしてください。</div>`;
+      playerList.innerHTML = `<div class="ghost">プレイヤーがまだいません。スクショを選択してください。</div>`;
       return;
     }
-
-    playerList.innerHTML = list.map(p=>{
-      const sel = state.selected.has(p.id) ? "selected" : "";
-      return `
-        <div class="row ${sel}" data-id="${p.id}">
-          <img class="avatar" src="${placeholderAvatar()}" alt="">
-          <div class="meta">
-            <div class="name">${escapeHtml(p.name)}</div>
-            <div class="stats">
-              <span class="tag">戦力 ${escapeHtml(p.powerRaw || String(p.power))}</span>
-            </div>
-          </div>
-          <div class="power">${formatCompact(p.power)}</div>
+    playerList.innerHTML = list.map(p=> `
+      <div class="row">
+        <img class="avatar" src="${placeholderAvatar()}" alt="">
+        <div class="meta">
+          <div class="name">${escapeHtml(p.name)}</div>
+          <div class="stats"><span class="tag">戦力 ${escapeHtml(p.powerRaw)}</span></div>
         </div>
-      `;
-    }).join("");
-
-    [...playerList.querySelectorAll(".row")].forEach(el=>{
-      el.addEventListener("click", ()=>{
-        const id = Number(el.dataset.id);
-        if(state.selected.has(id)) state.selected.delete(id); else state.selected.add(id);
-        save(); renderPlayers(); syncButtons();
-      }, { passive:true });
-    });
+        <div class="power">${formatCompact(p.power)}</div>
+      </div>
+    `).join("");
   }
 
   function renderGroups(){
-    if(state.groups.length === 0){
-      groupList.innerHTML = `<div class="ghost">グループがまだありません。右上のフォームから作成してください。</div>`;
-      btnExport.disabled = true;
-      return;
-    }
-    btnExport.disabled = false;
-  }
-
-  function syncButtons(){
-    btnAssign.disabled = state.selected.size === 0 || state.groups.length === 0;
-    btnExport.disabled = state.groups.length === 0;
-  }
-
-  function openAssignDialog(){
-    dlgBody.innerHTML = state.groups.map(g=> `
-      <button class="btn primary" style="justify-content:space-between;" data-gid="${g.id}" type="button">
-        <span style="display:flex;align-items:center;gap:10px;min-width:0;">
-          <span style="width:10px;height:10px;border-radius:999px;background:${g.color};border:1px solid rgba(255,255,255,.25);"></span>
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(g.name)}</span>
-        </span>
-        <span class="pill">${g.memberIds.length}人</span>
-      </button>
-    `).join("");
-    [...dlgBody.querySelectorAll("button[data-gid]")].forEach(b=>{
-      b.addEventListener("click", ()=>{
-        const gid = Number(b.dataset.gid);
-        addSelectedToGroup(gid);
-        if (typeof dlg.close === "function") dlg.close(); else dlg.removeAttribute("open");
-      });
-    });
-    if (typeof dlg.showModal === "function") dlg.showModal(); else dlg.setAttribute("open", "");
-  }
-
-  function addSelectedToGroup(gid){
-    const g = state.groups.find(x=>x.id===gid);
-    if(!g) return;
-    for(const pid of state.selected) if(!g.memberIds.includes(pid)) g.memberIds.push(pid);
-    state.selected.clear();
-    save(); renderPlayers(); renderGroups(); syncButtons();
+    groupList.innerHTML = `<div class="ghost">（この版はOCR安定化テスト用です。OCRが動いたらグループ機能を戻します）</div>`;
+    btnExport.disabled = true;
   }
 
   function readAsDataURL(f){
@@ -759,7 +683,6 @@
     </svg>`;
     return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
   }
-
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
   }
