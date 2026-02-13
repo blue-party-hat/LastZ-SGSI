@@ -1,1034 +1,991 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Player Group Manager</title>
-    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1600px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            text-align: center;
-            font-size: 32px;
-        }
-
-        .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
-
-        /* Upload Section */
-        .upload-section {
-            border: 3px dashed #667eea;
-            border-radius: 10px;
-            padding: 40px;
-            text-align: center;
-            margin-bottom: 20px;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: #f8f9ff;
-            position: relative;
-        }
-
-        .upload-section:hover, .upload-section.drag-over {
-            border-color: #764ba2;
-            background: #f0f2ff;
-            transform: scale(1.01);
-        }
-
-        .upload-section input[type="file"] {
-            display: none;
-        }
-
-        .upload-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
-        }
-
-        .upload-text {
-            font-size: 18px;
-            color: #333;
-            font-weight: 600;
-        }
-
-        .upload-subtext {
-            font-size: 14px;
-            color: #666;
-            margin-top: 8px;
-        }
-
-        /* Processing Status */
-        .processing {
-            display: none;
-            margin: 20px 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);
-            border-radius: 8px;
-            text-align: center;
-            border-left: 5px solid #ffc107;
-        }
-
-        .processing.active {
-            display: block;
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-
-        .processing-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #ffc107;
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 10px;
-            vertical-align: middle;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Main Layout */
-        .main-layout {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-top: 20px;
-        }
-
-        .players-section, .groups-section {
-            background: #f8f9fa;
-            padding: 25px;
-            border-radius: 10px;
-            min-height: 500px;
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            border-bottom: 3px solid #667eea;
-            padding-bottom: 15px;
-        }
-
-        h2 {
-            color: #333;
-            font-size: 24px;
-            margin: 0;
-        }
-
-        .player-count {
-            background: #667eea;
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        /* Player Cards */
-        .players-list {
-            max-height: 600px;
-            overflow-y: auto;
-            padding-right: 10px;
-        }
-
-        .players-list::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .players-list::-webkit-scrollbar-track {
-            background: #e9ecef;
-            border-radius: 10px;
-        }
-
-        .players-list::-webkit-scrollbar-thumb {
-            background: #667eea;
-            border-radius: 10px;
-        }
-
-        .player-card {
-            background: white;
-            padding: 15px;
-            margin-bottom: 12px;
-            border-radius: 10px;
-            display: grid;
-            grid-template-columns: 60px 1fr 80px 110px;
-            gap: 15px;
-            align-items: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            cursor: pointer;
-            transition: all 0.3s;
-            border: 2px solid transparent;
-        }
-
-        .player-card:hover {
-            transform: translateX(5px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            border-color: #e9ecef;
-        }
-
-        .player-card.selected {
-            border: 3px solid #667eea;
-            background: #f0f2ff;
-            transform: translateX(8px);
-        }
-
-        .player-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid #ddd;
-            background: #f0f0f0;
-        }
-
-        .player-info {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .player-name {
-            font-weight: 700;
-            color: #333;
-            font-size: 16px;
-        }
-
-        .player-hq {
-            color: #666;
-            font-size: 13px;
-            background: #e9ecef;
-            padding: 2px 8px;
-            border-radius: 4px;
-            display: inline-block;
-            width: fit-content;
-        }
-
-        .player-power {
-            font-weight: 700;
-            color: #e74c3c;
-            font-size: 20px;
-            text-align: right;
-        }
-
-        .player-power::before {
-            content: '⚡ ';
-        }
-
-        .player-actions {
-            display: flex;
-            gap: 5px;
-        }
-
-        /* Buttons */
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-danger {
-            background: #e74c3c;
-            color: white;
-            font-size: 12px;
-            padding: 6px 12px;
-        }
-
-        .btn-danger:hover {
-            background: #c0392b;
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        /* Group Creation */
-        .group-creator {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e9ecef;
-            border-radius: 6px;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .color-picker-group {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 10px;
-        }
-
-        .color-option {
-            width: 100%;
-            aspect-ratio: 1;
-            border-radius: 8px;
-            cursor: pointer;
-            border: 3px solid transparent;
-            transition: all 0.3s;
-        }
-
-        .color-option:hover {
-            transform: scale(1.1);
-        }
-
-        .color-option.selected {
-            border-color: #333;
-            transform: scale(1.15);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-
-        /* Groups List */
-        .groups-list {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .group-card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            border-left: 6px solid;
-        }
-
-        .group-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .group-name {
-            font-size: 18px;
-            font-weight: 700;
-            color: #333;
-        }
-
-        .group-members-list {
-            margin-top: 10px;
-        }
-
-        .group-member {
-            background: #f8f9fa;
-            padding: 8px 12px;
-            border-radius: 6px;
-            margin-bottom: 6px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 13px;
-        }
-
-        .member-info {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .member-name {
-            font-weight: 600;
-            color: #333;
-        }
-
-        .member-power {
-            color: #e74c3c;
-            font-weight: 700;
-        }
-
-        .remove-member-btn {
-            background: #dc3545;
-            color: white;
-            border: none;
-            padding: 4px 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 11px;
-        }
-
-        .remove-member-btn:hover {
-            background: #c82333;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #999;
-        }
-
-        .empty-state-icon {
-            font-size: 64px;
-            margin-bottom: 15px;
-        }
-
-        .empty-state-text {
-            font-size: 16px;
-            color: #666;
-        }
-
-        /* Clear Data Button */
-        .danger-zone {
-            margin-top: 20px;
-            padding: 15px;
-            background: #fff5f5;
-            border-radius: 8px;
-            border: 2px solid #fee;
-            text-align: center;
-        }
-
-        .danger-zone-title {
-            color: #e74c3c;
-            font-weight: 600;
-            margin-bottom: 10px;
-            font-size: 14px;
-        }
-
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.7);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            max-width: 500px;
-            width: 90%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-
-        .modal-header {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 20px;
-            color: #333;
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .modal-actions .btn {
-            flex: 1;
-        }
-
-        /* Responsive */
-        @media (max-width: 1200px) {
-            .main-layout {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .player-card {
-                grid-template-columns: 50px 1fr;
-                gap: 10px;
-            }
-
-            .player-hq, .player-actions {
-                grid-column: 1 / -1;
-            }
-
-            .color-picker-group {
-                grid-template-columns: repeat(4, 1fr);
-            }
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>プレイヤー振り分け（Last Z）</title>
+
+  <!-- OCR: Tesseract.js (browser) -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <!-- Export to image -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+  <style>
+    :root{
+      --bg0:#07080b;
+      --bg1:#0b0d12;
+      --panel: rgba(255,255,255,.06);
+      --panel2: rgba(255,255,255,.09);
+      --stroke: rgba(255,255,255,.12);
+      --stroke2: rgba(255,255,255,.18);
+      --text:#f3f5f7;
+      --muted: rgba(243,245,247,.68);
+      --silver:#cfd6de;
+      --shadow: 0 18px 60px rgba(0,0,0,.55);
+      --radius: 18px;
+      --radius2: 14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      background:
+        radial-gradient(1200px 800px at 25% 10%, rgba(255,255,255,.08), transparent 60%),
+        radial-gradient(900px 700px at 85% 30%, rgba(255,255,255,.06), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      padding:22px;
+    }
+    .app{
+      max-width: 1480px;
+      margin: 0 auto;
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+    }
+    .topbar{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:16px;
+    }
+    .brand{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .brand h1{
+      margin:0;
+      font-size: 20px;
+      letter-spacing:.04em;
+      font-weight: 760;
+    }
+    .brand .sub{
+      margin:0;
+      color:var(--muted);
+      font-size: 12px;
+      line-height:1.35;
+    }
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .btn{
+      appearance:none;
+      border:1px solid var(--stroke);
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.05));
+      color:var(--text);
+      padding:10px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+      font-weight: 650;
+      font-size: 13px;
+      letter-spacing: .02em;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      user-select:none;
+      box-shadow: 0 8px 28px rgba(0,0,0,.25);
+    }
+    .btn:hover{ transform: translateY(-1px); border-color: var(--stroke2); }
+    .btn:disabled{ opacity:.45; cursor:not-allowed; transform:none; }
+    .btn.danger{
+      border-color: rgba(255,90,106,.35);
+      background: linear-gradient(180deg, rgba(255,90,106,.14), rgba(255,255,255,.05));
+    }
+    .btn.primary{
+      border-color: rgba(207,214,222,.35);
+      background: linear-gradient(180deg, rgba(207,214,222,.20), rgba(255,255,255,.05));
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap:16px;
+      align-items:start;
+    }
+    @media (max-width: 1100px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.045));
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card .hd{
+      padding:14px 16px;
+      border-bottom: 1px solid var(--stroke);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      background: rgba(0,0,0,.22);
+      backdrop-filter: blur(10px);
+    }
+    .card .hd h2{
+      margin:0;
+      font-size: 14px;
+      letter-spacing:.06em;
+      font-weight: 760;
+      color: var(--silver);
+      text-transform: uppercase;
+    }
+    .card .bd{ padding:14px 16px; }
+
+    /* Upload */
+    .drop{
+      border: 1px dashed rgba(207,214,222,.35);
+      background: rgba(255,255,255,.03);
+      border-radius: var(--radius2);
+      padding:16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      cursor:pointer;
+      transition: border-color .12s ease, background .12s ease;
+    }
+    .drop:hover{ border-color: rgba(207,214,222,.55); background: rgba(255,255,255,.05); }
+    .drop.dragover{ border-color: rgba(207,214,222,.75); background: rgba(255,255,255,.06); }
+    .drop .left{ display:flex; flex-direction:column; gap:4px; }
+    .drop .title{ font-weight: 760; }
+    .drop .hint{ color:var(--muted); font-size: 12px; }
+    .pill{
+      font-family: var(--mono);
+      font-size: 12px;
+      padding:6px 10px;
+      border-radius: 999px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.04);
+      color: rgba(243,245,247,.85);
+      white-space:nowrap;
+    }
+
+    .status{
+      margin-top:10px;
+      display:none;
+      padding:10px 12px;
+      border-radius: 12px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.04);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .status.show{ display:block; }
+
+    /* Players */
+    .toolbar{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom: 10px;
+    }
+    .toolbar .left, .toolbar .right{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    }
+    .input{
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      padding:10px 12px;
+      border-radius: 12px;
+      outline:none;
+      font-size: 13px;
+      min-width: 200px;
+    }
+    .input::placeholder{ color: rgba(243,245,247,.38); }
+    .list{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      max-height: 620px;
+      overflow:auto;
+      padding-right: 6px;
+    }
+    .row{
+      display:grid;
+      grid-template-columns: 54px 1fr auto;
+      gap:12px;
+      align-items:center;
+      padding:12px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      cursor:pointer;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+    }
+    .row:hover{
+      transform: translateY(-1px);
+      border-color: rgba(207,214,222,.26);
+      background: rgba(255,255,255,.05);
+    }
+    .row.selected{
+      border-color: rgba(207,214,222,.55);
+      background: rgba(207,214,222,.10);
+    }
+    .avatar{
+      width:54px; height:54px; border-radius: 14px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.04);
+      object-fit: cover;
+    }
+    .meta{ display:flex; flex-direction:column; gap:6px; min-width:0; }
+    .name{
+      font-weight: 820;
+      letter-spacing:.02em;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .stats{
+      display:flex; gap:8px; flex-wrap:wrap;
+      color: var(--muted);
+      font-size: 12px;
+      align-items:center;
+    }
+    .tag{
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.04);
+      padding:3px 8px;
+      border-radius: 999px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: rgba(243,245,247,.84);
+    }
+    .power{
+      font-family: var(--mono);
+      font-weight: 900;
+      letter-spacing:.02em;
+      color: var(--silver);
+      text-align:right;
+      min-width: 120px;
+    }
+
+    /* Groups */
+    .groupForm{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap:10px;
+      margin-bottom: 12px;
+      align-items:center;
+    }
+    .colors{
+      display:flex; gap:8px; flex-wrap:wrap;
+      margin: 10px 0 12px;
+    }
+    .c{
+      width: 22px; height: 22px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.18);
+      cursor:pointer;
+      position:relative;
+      box-shadow: 0 8px 20px rgba(0,0,0,.25);
+    }
+    .c.sel::after{
+      content:"";
+      position:absolute; inset:-3px;
+      border-radius: 999px;
+      border: 2px solid rgba(243,245,247,.85);
+      filter: drop-shadow(0 6px 12px rgba(0,0,0,.35));
+    }
+    .groups{
+      display:flex; flex-direction:column; gap:12px;
+      max-height: 620px; overflow:auto; padding-right: 6px;
+    }
+    .g{
+      border-radius: var(--radius2);
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      overflow:hidden;
+    }
+    .gHd{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:12px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+    }
+    .gTitle{
+      display:flex; align-items:center; gap:10px; min-width:0;
+    }
+    .dot{
+      width:10px; height:10px; border-radius: 999px;
+      border:1px solid rgba(255,255,255,.25);
+    }
+    .gName{
+      font-weight: 850;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .gSub{ color: var(--muted); font-size: 12px; margin-top:2px; }
+    .gBd{ padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+    .m{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:10px;
+      border-radius: 12px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+    }
+    .mLeft{ display:flex; align-items:center; gap:10px; min-width:0; }
+    .mA{
+      width:34px; height:34px; border-radius: 10px;
+      border:1px solid rgba(255,255,255,.14);
+      object-fit: cover;
+      background: rgba(255,255,255,.04);
+    }
+    .mName{
+      font-weight: 720;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .mRight{ display:flex; align-items:center; gap:8px; }
+    .mini{ font-family: var(--mono); font-size: 12px; color: rgba(243,245,247,.82); }
+    .ghost{
+      color: var(--muted);
+      font-size: 13px;
+      padding: 26px 10px;
+      text-align:center;
+      border:1px dashed rgba(207,214,222,.22);
+      border-radius: var(--radius2);
+      background: rgba(255,255,255,.02);
+    }
+
+    /* Export capture area */
+    .captureWrap{
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: var(--radius2);
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.03);
+    }
+    .captureTitle{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      margin: 0 0 8px 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+  </style>
 </head>
+
 <body>
-    <div class="container">
-        <h1>⚔️ Player Group Manager</h1>
-        <p class="subtitle">Upload player screenshots, extract data, and organize into groups</p>
-
-        <!-- Upload Section -->
-        <div class="upload-section" id="uploadSection">
-            <input type="file" id="fileInput" accept="image/*" multiple>
-            <div class="upload-icon">📤</div>
-            <div class="upload-text">Click or Drag & Drop Player Screenshots</div>
-            <div class="upload-subtext">Supports JPG, PNG, WebP - Multiple files allowed</div>
-        </div>
-
-        <!-- Processing Status -->
-        <div class="processing" id="processingStatus">
-            <div class="processing-spinner"></div>
-            <span id="processingText">Processing image...</span>
-        </div>
-
-        <!-- Main Layout -->
-        <div class="main-layout">
-            <!-- Players Section -->
-            <div class="players-section">
-                <div class="section-header">
-                    <h2>📊 Players</h2>
-                    <span class="player-count" id="playerCount">0 Players</span>
-                </div>
-                
-                <div class="players-list" id="playersList">
-                    <div class="empty-state">
-                        <div class="empty-state-icon">🎮</div>
-                        <div class="empty-state-text">No players yet. Upload a screenshot to get started!</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Groups Section -->
-            <div class="groups-section">
-                <div class="section-header">
-                    <h2>👥 Groups</h2>
-                </div>
-
-                <!-- Group Creator -->
-                <div class="group-creator">
-                    <div class="form-group">
-                        <label for="groupName">Group Name</label>
-                        <input type="text" id="groupName" placeholder="e.g., Alpha Team, Main Squad">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Group Color</label>
-                        <div class="color-picker-group" id="colorPicker"></div>
-                    </div>
-
-                    <button class="btn btn-primary" id="createGroupBtn" style="width: 100%;" onclick="createGroup()">
-                        ➕ Create Group
-                    </button>
-                </div>
-
-                <!-- Groups List -->
-                <div class="groups-list" id="groupsList">
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📋</div>
-                        <div class="empty-state-text">No groups created yet</div>
-                    </div>
-                </div>
-
-                <!-- Danger Zone -->
-                <div class="danger-zone">
-                    <div class="danger-zone-title">⚠️ Danger Zone</div>
-                    <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
-                </div>
-            </div>
-        </div>
+  <div class="app">
+    <div class="topbar">
+      <div class="brand">
+        <h1>プレイヤー振り分けツール（Last Z）</h1>
+        <p class="sub">画像から「名前 / HQ / 戦力」を抽出→戦力順に整列→グループに割り当て→グループ一覧を画像でエクスポート。</p>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="btnExport" disabled>グループを画像で保存</button>
+        <button class="btn danger" id="btnReset">全データ削除</button>
+      </div>
     </div>
 
-    <!-- Add to Group Modal -->
-    <div class="modal" id="addToGroupModal">
-        <div class="modal-content">
-            <div class="modal-header">Select Group</div>
-            <div id="groupSelectionList"></div>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-            </div>
+    <div class="grid">
+      <!-- Left: Players -->
+      <div class="card">
+        <div class="hd">
+          <h2>Players</h2>
+          <div class="pill" id="pillCount">0 人</div>
         </div>
+        <div class="bd">
+          <label class="drop" id="drop">
+            <input id="file" type="file" accept="image/*" multiple hidden />
+            <div class="left">
+              <div class="title">画像をアップロード（クリック / ドロップ）</div>
+              <div class="hint">メンバー一覧のスクショを複数選択OK（HQ=城アイコン横 / 戦力=盾アイコン横）</div>
+            </div>
+            <div class="pill">OCR 実行</div>
+          </label>
+          <div class="status" id="status">待機中</div>
+
+          <div class="toolbar" style="margin-top:12px;">
+            <div class="left">
+              <input class="input" id="q" placeholder="名前で検索…" />
+            </div>
+            <div class="right">
+              <button class="btn" id="btnSelectNone">選択解除</button>
+              <button class="btn" id="btnAssign" disabled>選択中を追加…</button>
+            </div>
+          </div>
+
+          <div class="list" id="playerList"></div>
+        </div>
+      </div>
+
+      <!-- Right: Groups -->
+      <div class="card">
+        <div class="hd">
+          <h2>Groups</h2>
+          <div class="pill" id="pillGroup">0 グループ</div>
+        </div>
+        <div class="bd">
+          <div class="groupForm">
+            <input class="input" id="groupName" placeholder="グループ名（例：第一部隊）" />
+            <button class="btn primary" id="btnCreate">グループ作成</button>
+          </div>
+          <div class="colors" id="colors"></div>
+
+          <div class="captureWrap">
+            <div class="captureTitle">
+              <span>このエリアが画像出力されます</span>
+              <span class="pill" id="pillCapture">PNG</span>
+            </div>
+            <div id="capture">
+              <div class="groups" id="groupList"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
     </div>
 
-    <script>
-        // Global state
-        let players = [];
-        let groups = [];
-        let selectedPlayers = [];
-        let selectedColor = '#667eea';
-        
-        const colors = [
-            '#667eea', '#764ba2', '#f093fb', '#4facfe',
-            '#43e97b', '#fa709a', '#fee140', '#30cfd0',
-            '#a8edea', '#fed6e3', '#c471f5', '#fa8072',
-            '#ff6b6b', '#4ecdc4', '#45b7d1', '#f7b731'
-        ];
+    <!-- modal -->
+    <dialog id="dlg" style="border:none;border-radius:18px; padding:0; background: rgba(10,12,16,.95); color: var(--text); box-shadow: var(--shadow); width:min(560px, 92vw);">
+      <div style="padding:16px 16px 12px; border-bottom:1px solid rgba(255,255,255,.12); display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <div style="font-weight:850; letter-spacing:.02em;">追加先グループを選択</div>
+        <button class="btn" id="btnClose">閉じる</button>
+      </div>
+      <div id="dlgBody" style="padding:14px 16px; display:flex; flex-direction:column; gap:10px;"></div>
+    </dialog>
+  </div>
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            loadFromLocalStorage();
-            renderColorPicker();
-            setupEventListeners();
-            renderPlayers();
-            renderGroups();
-        });
+<script>
+const LS_KEY = "lz_player_groups_v2";
+let state = load() ?? {
+  players: [],
+  groups: [],
+  color: "#cfd6de",
+  selected: new Set(),
+  images: []
+};
 
-        function setupEventListeners() {
-            const uploadSection = document.getElementById('uploadSection');
-            const fileInput = document.getElementById('fileInput');
+const palette = [
+  "#cfd6de","#ffffff","#bfc7d1","#9aa3ad",
+  "#ff5a6a","#ffb86b","#46e6a3","#5aa9ff",
+  "#c471f5","#30cfd0","#fee140","#fa709a"
+];
 
-            uploadSection.addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', handleFileSelect);
+const $ = (s)=>document.querySelector(s);
+const drop = $("#drop");
+const file = $("#file");
+const statusEl = $("#status");
+const playerList = $("#playerList");
+const groupList = $("#groupList");
+const pillCount = $("#pillCount");
+const pillGroup = $("#pillGroup");
+const q = $("#q");
 
-            // Drag and drop
-            uploadSection.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadSection.classList.add('drag-over');
-            });
+const btnReset = $("#btnReset");
+const btnCreate = $("#btnCreate");
+const btnAssign = $("#btnAssign");
+const btnSelectNone = $("#btnSelectNone");
+const btnExport = $("#btnExport");
 
-            uploadSection.addEventListener('dragleave', () => {
-                uploadSection.classList.remove('drag-over');
-            });
+const dlg = $("#dlg");
+const dlgBody = $("#dlgBody");
+const btnClose = $("#btnClose");
 
-            uploadSection.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadSection.classList.remove('drag-over');
-                handleFileSelect({ target: { files: e.dataTransfer.files } });
-            });
+renderPalette();
+renderAll();
+
+drop.addEventListener("click", ()=> file.click());
+file.addEventListener("change", async (e)=> {
+  const files = [...e.target.files];
+  e.target.value = "";
+  if(!files.length) return;
+  await ingestFiles(files);
+});
+
+drop.addEventListener("dragover", (e)=>{ e.preventDefault(); drop.classList.add("dragover"); });
+drop.addEventListener("dragleave", ()=> drop.classList.remove("dragover"));
+drop.addEventListener("drop", async (e)=>{
+  e.preventDefault(); drop.classList.remove("dragover");
+  const files = [...e.dataTransfer.files].filter(f=>f.type.startsWith("image/"));
+  if(!files.length) return;
+  await ingestFiles(files);
+});
+
+q.addEventListener("input", ()=> renderPlayers());
+
+btnReset.addEventListener("click", ()=>{
+  if(!confirm("全データ（プレイヤー/グループ）を削除します。よろしいですか？")) return;
+  state = { players:[], groups:[], color:"#cfd6de", selected:new Set(), images:[] };
+  save();
+  renderAll();
+});
+
+btnCreate.addEventListener("click", ()=>{
+  const name = $("#groupName").value.trim();
+  if(!name) return alert("グループ名を入力してください。");
+  const g = { id: Date.now(), name, color: state.color, memberIds: [] };
+  state.groups.unshift(g);
+  $("#groupName").value = "";
+  save();
+  renderGroups();
+});
+
+btnSelectNone.addEventListener("click", ()=>{
+  state.selected.clear();
+  save();
+  renderPlayers();
+  syncButtons();
+});
+
+btnAssign.addEventListener("click", ()=>{
+  if(state.selected.size === 0) return;
+  if(state.groups.length === 0) return alert("先にグループを作成してください。");
+  openAssignDialog();
+});
+
+btnClose.addEventListener("click", ()=> dlg.close());
+
+btnExport.addEventListener("click", async ()=>{
+  if(state.groups.length === 0) return;
+  // Export capture area with html2canvas [web:22]
+  const node = document.getElementById("capture");
+  const canvas = await html2canvas(node, { backgroundColor: "#0b0d12", scale: 2 });
+  const url = canvas.toDataURL("image/png");
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `groups_${new Date().toISOString().slice(0,10)}.png`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+});
+
+async function ingestFiles(files){
+  setStatus(`OCR準備中…（${files.length}枚）`, true);
+
+  for(let i=0;i<files.length;i++){
+    setStatus(`OCR中… ${i+1}/${files.length}`, true);
+    const dataUrl = await readAsDataURL(files[i]);
+    const imgMeta = await getImageMeta(dataUrl);
+    const srcImageId = Date.now() + i;
+
+    state.images.push({ id: srcImageId, dataUrl, w: imgMeta.w, h: imgMeta.h });
+
+    // Preprocess (grayscale + threshold) for OCR quality
+    const pre = await preprocessToDataURL(dataUrl);
+
+    let text = "";
+    try{
+      text = await ocrText(pre, "eng+jpn");
+    }catch(e){
+      text = await ocrText(pre, "eng");
+    }
+
+    const extracted = extractPlayersFromText(text);
+    if(extracted.length === 0){
+      console.log("OCR raw text:", text);
+      alert("抽出に失敗しました。画像の解像度/拡大率を上げるか、別のスクショで試してください。");
+      continue;
+    }
+
+    const withIcons = await attachIconsHeuristic(extracted, dataUrl, imgMeta.w, imgMeta.h);
+
+    for(const p of withIcons){
+      const exists = state.players.find(x => x.name === p.name);
+      if(exists){
+        if(p.power > exists.power){
+          exists.power = p.power;
+          exists.powerRaw = p.powerRaw;
         }
+        exists.hq = p.hq ?? exists.hq;
+        exists.iconDataUrl = p.iconDataUrl || exists.iconDataUrl;
+      }else{
+        state.players.push(p);
+      }
+    }
 
-        function renderColorPicker() {
-            const picker = document.getElementById('colorPicker');
-            picker.innerHTML = colors.map(color => `
-                <div class="color-option ${color === selectedColor ? 'selected' : ''}" 
-                     style="background: ${color};"
-                     onclick="selectColor('${color}')"></div>
-            `).join('');
-        }
+    state.players.sort((a,b)=> b.power - a.power);
+    save();
+    renderAll();
+  }
 
-        function selectColor(color) {
-            selectedColor = color;
-            renderColorPicker();
-        }
+  setStatus("完了。", false);
+}
 
-        async function handleFileSelect(e) {
-            const files = Array.from(e.target.files);
-            if (files.length === 0) return;
+async function ocrText(dataUrl, lang){
+  // Tesseract.js v5 CDN usage [web:44]
+  const worker = await Tesseract.createWorker(lang, 1, {
+    langPath: "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/lang-data"
+  });
 
-            const processingStatus = document.getElementById('processingStatus');
-            const processingText = document.getElementById('processingText');
-            
-            processingStatus.classList.add('active');
+  await worker.setParameters({
+    tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-+_ぁあぃいぅうぇえぉおかがきぎくぐけげこごさざしじすずせぜそぞただちぢつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもやゆよらりるれろわをんー々ァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂツヅテデトドナニヌネノハバパヒビピフブぷヘベペホボポマミムメモヤユヨラリルレロワヲン・ 　"
+  });
 
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                processingText.textContent = `Processing image ${i + 1} of ${files.length}...`;
-                
-                try {
-                    await processImage(file);
-                } catch (error) {
-                    console.error('Error processing image:', error);
-                    alert(`Error processing ${file.name}: ${error.message}`);
-                }
-            }
+  const { data } = await worker.recognize(dataUrl);
+  await worker.terminate();
+  return data.text || "";
+}
 
-            processingStatus.classList.remove('active');
-            e.target.value = ''; // Reset input
-            renderPlayers();
-            saveToLocalStorage();
-        }
+function extractPlayersFromText(text){
+  const lines = text.split("\n").map(s=>s.trim()).filter(Boolean);
+  const players = [];
+  const seen = new Set();
 
-        async function processImage(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                
-                reader.onload = async function(event) {
-                    const img = new Image();
-                    img.onload = async function() {
-                        try {
-                            // Perform OCR [web:11][web:15][web:18]
-                            const worker = await Tesseract.createWorker('eng');
-                            const { data: { text } } = await worker.recognize(event.target.result);
-                            await worker.terminate();
+  for(const line of lines){
+    const powerMatch = line.match(/(\d{1,4}(?:\.\d{1,2})?)\s*([KMB])/i);
+    if(!powerMatch) continue;
 
-                            // Extract player data from OCR text
-                            const extractedPlayers = parsePlayerData(text, event.target.result);
-                            
-                            extractedPlayers.forEach(player => {
-                                // Check if player already exists
-                                const exists = players.find(p => p.name === player.name);
-                                if (!exists) {
-                                    players.push(player);
-                                }
-                            });
+    const powerRaw = `${powerMatch[1]}${powerMatch[2].toUpperCase()}`;
+    const power = parseCompactNumber(powerRaw);
 
-                            // Sort by power [web:11]
-                            players.sort((a, b) => b.power - a.power);
-                            
-                            resolve();
-                        } catch (error) {
-                            reject(error);
-                        }
-                    };
-                    img.src = event.target.result;
-                };
-                
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
+    const hqCandidates = [...line.matchAll(/\b(\d{1,2})\b/g)].map(m=>parseInt(m[1],10));
+    let hq = null;
+    if(hqCandidates.length){
+      const filtered = hqCandidates.filter(n => n > 0 && n <= 50);
+      if(filtered.length) hq = filtered[filtered.length - 1];
+    }
 
-        function parsePlayerData(text, imageDataUrl) {
-            const extractedPlayers = [];
-            const lines = text.split('\n').filter(line => line.trim());
+    let namePart = line;
+    namePart = namePart.replace(powerMatch[0], " ");
+    if(hq !== null) namePart = namePart.replace(new RegExp(`\\b${hq}\\b`), " ");
+    namePart = namePart
+      .replace(/\b(Online|ago|min|m|h)\b/gi," ")
+      .replace(/[|•]/g," ")
+      .replace(/\s+/g," ")
+      .trim();
 
-            // Pattern matching for common game data formats
-            // Looking for patterns like: "PlayerName HQ25 1.2M" or "PlayerName 25 1200000"
-            const patterns = [
-                /(\w+)\s*HQ\s*(\d+)\s*([\d,.]+[KMB]?)/gi,
-                /(\w+)\s*(\d+)\s*([\d,.]+)/gi
-            ];
+    const name = namePart.slice(0, 24).trim();
+    if(name.length < 2) continue;
 
-            let playerId = Date.now();
+    if(seen.has(name)) continue;
+    seen.add(name);
 
-            patterns.forEach(pattern => {
-                let match;
-                while ((match = pattern.exec(text)) !== null) {
-                    const name = match[1];
-                    const hq = parseInt(match[2]);
-                    const powerStr = match[3];
-                    const power = parsePowerValue(powerStr);
+    players.push({
+      id: Date.now() + Math.floor(Math.random()*1e6),
+      name,
+      hq: hq ?? 0,
+      power,
+      powerRaw,
+      iconDataUrl: "",
+    });
+  }
+  return players;
+}
 
-                    if (power > 0) {
-                        extractedPlayers.push({
-                            id: playerId++,
-                            name: name,
-                            hq: hq,
-                            power: power,
-                            icon: imageDataUrl // Use uploaded image as placeholder
-                        });
-                    }
-                }
-            });
+function parseCompactNumber(s){
+  const m = String(s).toUpperCase().match(/(\d+(?:\.\d+)?)([KMB])/);
+  if(!m) return 0;
+  const n = parseFloat(m[1]);
+  const u = m[2];
+  const mult = u === "K" ? 1e3 : u === "M" ? 1e6 : 1e9;
+  return Math.round(n * mult);
+}
 
-            // If no matches, create a sample player for demonstration
-            if (extractedPlayers.length === 0) {
-                extractedPlayers.push({
-                    id: Date.now(),
-                    name: 'Player' + Math.floor(Math.random() * 1000),
-                    hq: Math.floor(Math.random() * 30) + 1,
-                    power: Math.floor(Math.random() * 10000000),
-                    icon: imageDataUrl
-                });
-            }
+function formatCompact(n){
+  if(n >= 1e9) return (n/1e9).toFixed(2)+"B";
+  if(n >= 1e6) return (n/1e6).toFixed(1)+"M";
+  if(n >= 1e3) return (n/1e3).toFixed(1)+"K";
+  return String(n);
+}
 
-            return extractedPlayers;
-        }
+async function attachIconsHeuristic(players, fullDataUrl, w, h){
+  const canvas = await dataUrlToCanvas(fullDataUrl);
 
-        function parsePowerValue(str) {
-            str = str.toUpperCase().replace(/,/g, '');
-            let multiplier = 1;
+  // Heuristic crop: 2 columns, ~4 rows visible (tune if needed)
+  const out = [];
+  const topOffset = Math.floor(h * 0.02);
+  const rowH = Math.floor(h / 4.1);
+  const colW = Math.floor(w / 2);
+  const padX = Math.floor(w * 0.02);
+  const padY = Math.floor(rowH * 0.18);
+  const avatarSize = Math.floor(rowH * 0.62);
 
-            if (str.includes('K')) {
-                multiplier = 1000;
-                str = str.replace('K', '');
-            } else if (str.includes('M')) {
-                multiplier = 1000000;
-                str = str.replace('M', '');
-            } else if (str.includes('B')) {
-                multiplier = 1000000000;
-                str = str.replace('B', '');
-            }
+  for(let i=0;i<players.length;i++){
+    const r = Math.floor(i/2);
+    const c = i % 2;
+    const x = c*colW + padX;
+    const y = topOffset + r*rowH + padY;
 
-            const num = parseFloat(str);
-            return isNaN(num) ? 0 : Math.floor(num * multiplier);
-        }
+    const crop = document.createElement("canvas");
+    crop.width = avatarSize;
+    crop.height = avatarSize;
+    crop.getContext("2d").drawImage(canvas, x, y, avatarSize, avatarSize, 0, 0, avatarSize, avatarSize);
+    const iconDataUrl = crop.toDataURL("image/jpeg", 0.85);
 
-        function formatPower(power) {
-            if (power >= 1000000000) return (power / 1000000000).toFixed(2) + 'B';
-            if (power >= 1000000) return (power / 1000000).toFixed(2) + 'M';
-            if (power >= 1000) return (power / 1000).toFixed(1) + 'K';
-            return power.toString();
-        }
+    out.push({ ...players[i], iconDataUrl });
+  }
+  return out;
+}
 
-        function renderPlayers() {
-            const playersList = document.getElementById('playersList');
-            const playerCount = document.getElementById('playerCount');
+async function preprocessToDataURL(dataUrl){
+  const canvas = await dataUrlToCanvas(dataUrl);
+  const ctx = canvas.getContext("2d");
+  const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+  const d = imgData.data;
 
-            playerCount.textContent = `${players.length} Player${players.length !== 1 ? 's' : ''}`;
+  const threshold = 165;
+  for(let i=0;i<d.length;i+=4){
+    const r=d[i], g=d[i+1], b=d[i+2];
+    const gray = (0.299*r + 0.587*g + 0.114*b);
+    const v = gray > threshold ? 255 : 0;
+    d[i]=d[i+1]=d[i+2]=v;
+  }
+  ctx.putImageData(imgData,0,0);
+  return canvas.toDataURL("image/png");
+}
 
-            if (players.length === 0) {
-                playersList.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">🎮</div>
-                        <div class="empty-state-text">No players yet. Upload a screenshot to get started!</div>
-                    </div>
-                `;
-                return;
-            }
+function renderAll(){
+  renderPlayers();
+  renderGroups();
+  renderCounts();
+  syncButtons();
+}
 
-            playersList.innerHTML = players.map(player => `
-                <div class="player-card ${selectedPlayers.includes(player.id) ? 'selected' : ''}" 
-                     onclick="togglePlayerSelection(${player.id})">
-                    <img src="${player.icon}" alt="${player.name}" class="player-icon" 
-                         onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%23ddd%22/%3E%3Ctext x=%2250%22 y=%2250%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2240%22%3E👤%3C/text%3E%3C/svg%3E'">
-                    <div class="player-info">
-                        <div class="player-name">${player.name}</div>
-                        <div class="player-hq">HQ ${player.hq}</div>
-                    </div>
-                    <div class="player-power">${formatPower(player.power)}</div>
-                    <div class="player-actions">
-                        <button class="btn btn-danger" onclick="event.stopPropagation(); deletePlayer(${player.id})">🗑️</button>
-                    </div>
+function renderCounts(){
+  pillCount.textContent = `${state.players.length} 人`;
+  pillGroup.textContent = `${state.groups.length} グループ`;
+}
+
+function renderPlayers(){
+  const query = q.value.trim().toLowerCase();
+  const list = state.players
+    .filter(p => !query || p.name.toLowerCase().includes(query))
+    .sort((a,b)=> b.power - a.power);
+
+  if(list.length === 0){
+    playerList.innerHTML = `<div class="ghost">プレイヤーがまだいません。スクショをアップロードしてください。</div>`;
+    return;
+  }
+
+  playerList.innerHTML = list.map(p=>{
+    const sel = state.selected.has(p.id) ? "selected" : "";
+    const icon = p.iconDataUrl || placeholderAvatar();
+    return `
+      <div class="row ${sel}" data-id="${p.id}">
+        <img class="avatar" src="${icon}" alt="">
+        <div class="meta">
+          <div class="name">${escapeHtml(p.name)}</div>
+          <div class="stats">
+            <span class="tag">HQ ${p.hq ?? 0}</span>
+            <span class="tag">戦力 ${escapeHtml(p.powerRaw || formatCompact(p.power))}</span>
+          </div>
+        </div>
+        <div class="power">${formatCompact(p.power)}</div>
+      </div>
+    `;
+  }).join("");
+
+  [...playerList.querySelectorAll(".row")].forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = Number(el.dataset.id);
+      if(state.selected.has(id)) state.selected.delete(id);
+      else state.selected.add(id);
+      save();
+      renderPlayers();
+      syncButtons();
+    });
+  });
+}
+
+function renderGroups(){
+  if(state.groups.length === 0){
+    groupList.innerHTML = `<div class="ghost">グループがまだありません。右上のフォームから作成してください。</div>`;
+    btnExport.disabled = true;
+    return;
+  }
+
+  groupList.innerHTML = state.groups.map(g=>{
+    const members = g.memberIds.map(id=> state.players.find(p=>p.id===id)).filter(Boolean);
+    const total = members.reduce((s,p)=> s + (p.power||0), 0);
+
+    return `
+      <div class="g">
+        <div class="gHd">
+          <div class="gTitle">
+            <span class="dot" style="background:${g.color}"></span>
+            <div style="min-width:0;">
+              <div class="gName">${escapeHtml(g.name)}</div>
+              <div class="gSub">${members.length}人 / 合計 ${formatCompact(total)}</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn" data-act="add" data-gid="${g.id}">追加</button>
+            <button class="btn danger" data-act="del" data-gid="${g.id}">削除</button>
+          </div>
+        </div>
+        <div class="gBd">
+          ${members.length ? members.map(m=>{
+            const icon = m.iconDataUrl || placeholderAvatar();
+            return `
+              <div class="m">
+                <div class="mLeft">
+                  <img class="mA" src="${icon}" alt="">
+                  <div style="min-width:0;">
+                    <div class="mName">${escapeHtml(m.name)}</div>
+                    <div class="gSub">HQ ${m.hq ?? 0} / 戦力 ${escapeHtml(m.powerRaw || formatCompact(m.power))}</div>
+                  </div>
                 </div>
-            `).join('');
-        }
+                <div class="mRight">
+                  <div class="mini">${formatCompact(m.power)}</div>
+                  <button class="btn danger" data-act="rm" data-gid="${g.id}" data-pid="${m.id}">外す</button>
+                </div>
+              </div>
+            `;
+          }).join("") : `<div class="ghost">メンバー未追加。左でプレイヤーを選択して「選択中を追加…」またはこのグループの「追加」から入れてください。</div>`}
+        </div>
+      </div>
+    `;
+  }).join("");
 
-        function togglePlayerSelection(playerId) {
-            const index = selectedPlayers.indexOf(playerId);
-            if (index > -1) {
-                selectedPlayers.splice(index, 1);
-            } else {
-                selectedPlayers.push(playerId);
-            }
-            renderPlayers();
-        }
+  [...groupList.querySelectorAll("button[data-act]")].forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const act = b.dataset.act;
+      const gid = Number(b.dataset.gid);
+      if(act==="del"){
+        if(!confirm("このグループを削除しますか？")) return;
+        state.groups = state.groups.filter(x=>x.id!==gid);
+        save(); renderGroups(); renderCounts(); syncButtons();
+        return;
+      }
+      if(act==="add"){
+        if(state.selected.size === 0) return alert("左の一覧から追加したいプレイヤーを選択してください。");
+        addSelectedToGroup(gid);
+        return;
+      }
+      if(act==="rm"){
+        const pid = Number(b.dataset.pid);
+        const g = state.groups.find(x=>x.id===gid);
+        if(!g) return;
+        g.memberIds = g.memberIds.filter(id=>id!==pid);
+        save(); renderGroups(); syncButtons();
+        return;
+      }
+    });
+  });
 
-        function deletePlayer(playerId) {
-            if (confirm('Are you sure you want to delete this player?')) {
-                players = players.filter(p => p.id !== playerId);
-                selectedPlayers = selectedPlayers.filter(id => id !== playerId);
-                
-                // Remove from all groups
-                groups.forEach(group => {
-                    group.members = group.members.filter(id => id !== playerId);
-                });
-                
-                renderPlayers();
-                renderGroups();
-                saveToLocalStorage();
-            }
-        }
+  btnExport.disabled = false;
+}
 
-        function createGroup() {
-            const nameInput = document.getElementById('groupName');
-            const name = nameInput.value.trim();
+function syncButtons(){
+  btnAssign.disabled = state.selected.size === 0 || state.groups.length === 0;
+  btnExport.disabled = state.groups.length === 0;
+}
 
-            if (!name) {
-                alert('Please enter a group name');
-                return;
-            }
+function openAssignDialog(){
+  dlgBody.innerHTML = state.groups.map(g=> `
+    <button class="btn primary" style="justify-content:space-between;" data-gid="${g.id}">
+      <span style="display:flex;align-items:center;gap:10px;min-width:0;">
+        <span class="dot" style="background:${g.color}"></span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(g.name)}</span>
+      </span>
+      <span class="pill">${g.memberIds.length}人</span>
+    </button>
+  `).join("");
 
-            if (selectedPlayers.length === 0) {
-                alert('Please select at least one player to add to the group');
-                return;
-            }
+  [...dlgBody.querySelectorAll("button[data-gid]")].forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const gid = Number(b.dataset.gid);
+      addSelectedToGroup(gid);
+      dlg.close();
+    });
+  });
 
-            const group = {
-                id: Date.now(),
-                name: name,
-                color: selectedColor,
-                members: [...selectedPlayers],
-                createdAt: new Date().toISOString()
-            };
+  dlg.showModal();
+}
 
-            groups.push(group);
-            selectedPlayers = [];
-            nameInput.value = '';
-            
-            renderPlayers();
-            renderGroups();
-            saveToLocalStorage();
-        }
+function addSelectedToGroup(gid){
+  const g = state.groups.find(x=>x.id===gid);
+  if(!g) return;
+  for(const pid of state.selected){
+    if(!g.memberIds.includes(pid)) g.memberIds.push(pid);
+  }
+  state.selected.clear();
+  save();
+  renderPlayers();
+  renderGroups();
+  syncButtons();
+}
 
-        function renderGroups() {
-            const groupsList = document.getElementById('groupsList');
+function renderPalette(){
+  const wrap = $("#colors");
+  wrap.innerHTML = palette.map(c=> `
+    <div class="c ${state.color===c?"sel":""}" style="background:${c}" data-c="${c}"></div>
+  `).join("");
 
-            if (groups.length === 0) {
-                groupsList.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📋</div>
-                        <div class="empty-state-text">No groups created yet</div>
-                    </div>
-                `;
-                return;
-            }
+  [...wrap.querySelectorAll(".c")].forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.color = el.dataset.c;
+      save();
+      renderPalette();
+    });
+  });
+}
 
-            groupsList.innerHTML = groups.map(group => {
-                const members = group.members.map(memberId => 
-                    players.find(p => p.id === memberId)
-                ).filter(Boolean);
+function setStatus(msg, busy){
+  statusEl.textContent = msg;
+  statusEl.classList.add("show");
+  statusEl.style.borderColor = busy ? "rgba(207,214,222,.22)" : "rgba(70,230,163,.25)";
+}
 
-                const totalPower = members.reduce((sum, m) => sum + m.power, 0);
+function save(){
+  const plain = { ...state, selected: [...state.selected] };
+  localStorage.setItem(LS_KEY, JSON.stringify(plain));
+}
 
-                return `
-                    <div class="group-card" style="border-left-color: ${group.color};">
-                        <div class="group-header">
-                            <div>
-                                <div class="group-name">${group.name}</div>
-                                <div style="font-size: 12px; color: #666; margin-top: 5px;">
-                                    ${members.length} members • Total Power: ${formatPower(totalPower)}
-                                </div>
-                            </div>
-                            <button class="btn btn-danger" onclick="deleteGroup(${group.id})">Delete</button>
-                        </div>
-                        <div class="group-members-list">
-                            ${members.map(member => `
-                                <div class="group-member">
-                                    <div class="member-info">
-                                        <span class="member-name">${member.name}</span>
-                                        <span style="color: #999;">HQ ${member.hq}</span>
-                                        <span class="member-power">${formatPower(member.power)}</span>
-                                    </div>
-                                    <button class="remove-member-btn" onclick="removeMemberFromGroup(${group.id}, ${member.id})">Remove</button>
-                                </div>
-                            `).join('')}
-                        </div>
-                        <button class="btn btn-secondary" style="width: 100%; margin-top: 10px;" onclick="addMoreToGroup(${group.id})">
-                            ➕ Add More Players
-                        </button>
-                    </div>
-                `;
-            }).join('');
-        }
+function load(){
+  const raw = localStorage.getItem(LS_KEY);
+  if(!raw) return null;
+  const obj = JSON.parse(raw);
+  obj.selected = new Set(obj.selected || []);
+  return obj;
+}
 
-        function deleteGroup(groupId) {
-            if (confirm('Are you sure you want to delete this group?')) {
-                groups = groups.filter(g => g.id !== groupId);
-                renderGroups();
-                saveToLocalStorage();
-            }
-        }
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+}
 
-        function removeMemberFromGroup(groupId, memberId) {
-            const group = groups.find(g => g.id === groupId);
-            if (group) {
-                group.members = group.members.filter(id => id !== memberId);
-                renderGroups();
-                saveToLocalStorage();
-            }
-        }
+function readAsDataURL(f){
+  return new Promise((res, rej)=>{
+    const r = new FileReader();
+    r.onload = ()=> res(r.result);
+    r.onerror = rej;
+    r.readAsDataURL(f);
+  });
+}
 
-        function addMoreToGroup(groupId) {
-            if (selectedPlayers.length === 0) {
-                alert('Please select players first');
-                return;
-            }
+function getImageMeta(dataUrl){
+  return new Promise((res)=>{
+    const img = new Image();
+    img.onload = ()=> res({ w: img.naturalWidth, h: img.naturalHeight });
+    img.src = dataUrl;
+  });
+}
 
-            const group = groups.find(g => g.id === groupId);
-            if (group) {
-                selectedPlayers.forEach(playerId => {
-                    if (!group.members.includes(playerId)) {
-                        group.members.push(playerId);
-                    }
-                });
-                selectedPlayers = [];
-                renderPlayers();
-                renderGroups();
-                saveToLocalStorage();
-            }
-        }
+function dataUrlToCanvas(dataUrl){
+  return new Promise((res)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const c = document.createElement("canvas");
+      c.width = img.naturalWidth;
+      c.height = img.naturalHeight;
+      c.getContext("2d").drawImage(img, 0, 0);
+      res(c);
+    };
+    img.src = dataUrl;
+  });
+}
 
-        function clearAllData() {
-            if (confirm('⚠️ This will delete ALL players and groups. Are you sure?')) {
-                players = [];
-                groups = [];
-                selectedPlayers = [];
-                localStorage.clear();
-                renderPlayers();
-                renderGroups();
-            }
-        }
-
-        function saveToLocalStorage() {
-            localStorage.setItem('players', JSON.stringify(players));
-            localStorage.setItem('groups', JSON.stringify(groups));
-        }
-
-        function loadFromLocalStorage() {
-            const savedPlayers = localStorage.getItem('players');
-            const savedGroups = localStorage.getItem('groups');
-
-            if (savedPlayers) players = JSON.parse(savedPlayers);
-            if (savedGroups) groups = JSON.parse(savedGroups);
-        }
-
-        function closeModal() {
-            document.getElementById('addToGroupModal').classList.remove('active');
-        }
-    </script>
+function placeholderAvatar(){
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120">
+    <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1b1e28"/><stop offset="1" stop-color="#0b0d12"/>
+    </linearGradient></defs>
+    <rect width="120" height="120" rx="22" fill="url(#g)"/>
+    <circle cx="60" cy="48" r="18" fill="#cfd6de" opacity=".55"/>
+    <rect x="28" y="74" width="64" height="26" rx="13" fill="#cfd6de" opacity=".35"/>
+  </svg>`;
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+}
+</script>
 </body>
 </html>
