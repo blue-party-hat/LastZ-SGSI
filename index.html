@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ja">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>プレイヤー振り分け（Last Z）</title>
+  <title>Player Grouping (Last Z)</title>
 
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -14,13 +14,11 @@
       --stroke: rgba(255,255,255,.12); --stroke2: rgba(255,255,255,.18);
       --text:#f3f5f7; --muted: rgba(243,245,247,.68);
       --silver:#cfd6de;
-      --ok:#46e6a3; --bad:#ff5a6a;
       --shadow: 0 18px 60px rgba(0,0,0,.55);
       --radius: 18px; --radius2: 14px;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
     *{ box-sizing:border-box; }
-    html,body{ height:100%; }
     body{
       margin:0;
       background:
@@ -29,13 +27,12 @@
         linear-gradient(180deg, var(--bg0), var(--bg1));
       color:var(--text);
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
-      padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+      padding: 14px;
     }
     .app{ max-width: 1480px; margin: 0 auto; display:flex; flex-direction:column; gap:14px; }
     .topbar{ display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-    .brand{ display:flex; flex-direction:column; gap:6px; }
     .brand h1{ margin:0; font-size: 18px; letter-spacing:.04em; font-weight: 780; }
-    .brand .sub{ margin:0; color:var(--muted); font-size: 12px; line-height:1.35; max-width: 76ch; }
+    .brand .sub{ margin:6px 0 0; color:var(--muted); font-size: 12px; line-height:1.35; max-width: 80ch; }
     .actions{ display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
 
     .btn{
@@ -69,7 +66,7 @@
       padding:12px 14px;
       border-bottom: 1px solid var(--stroke);
       display:flex; align-items:center; justify-content:space-between; gap:10px;
-      background: rgba(0,0,0,.22); backdrop-filter: blur(10px);
+      background: rgba(0,0,0,.22);
       flex-wrap:wrap;
     }
     .card .hd h2{
@@ -162,7 +159,6 @@
       font-size: 13px;
       min-width: min(280px, 100%);
     }
-    .input::placeholder{ color: rgba(243,245,247,.38); }
 
     .list{ display:flex; flex-direction:column; gap:10px; max-height: 56vh; overflow:auto; padding-right: 6px; }
 
@@ -176,15 +172,14 @@
       border:1px solid rgba(255,255,255,.10);
       background: rgba(0,0,0,.18);
       cursor:pointer;
-      transition: border-color .12s ease, background .12s ease;
     }
     .row.selected{ border-color: rgba(207,214,222,.55); background: rgba(207,214,222,.10); }
     .avatar{ width:54px; height:54px; border-radius: 14px; border:1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); object-fit: cover; }
     .meta{ display:flex; flex-direction:column; gap:6px; min-width:0; }
-    .name{ font-weight: 860; letter-spacing:.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .name{ font-weight: 860; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .stats{ display:flex; gap:8px; flex-wrap:wrap; color: var(--muted); font-size: 12px; align-items:center; }
-    .tag{ border:1px solid var(--stroke); background: rgba(255,255,255,.04); padding:3px 8px; border-radius: 999px; font-family: var(--mono); font-size: 12px; color: rgba(243,245,247,.84); }
-    .power{ font-family: var(--mono); font-weight: 900; letter-spacing:.02em; color: var(--silver); text-align:right; min-width: 96px; }
+    .tag{ border:1px solid var(--stroke); background: rgba(255,255,255,.04); padding:3px 8px; border-radius: 999px; font-family: var(--mono); font-size: 12px; }
+    .power{ font-family: var(--mono); font-weight: 900; color: var(--silver); text-align:right; min-width: 96px; }
 
     .groupForm{
       display:grid;
@@ -199,16 +194,16 @@
     }
 
     .colors{ display:flex; gap:10px; flex-wrap:wrap; margin: 10px 0 12px; }
-    .c{ width: 26px; height: 26px; border-radius: 999px; border:1px solid rgba(255,255,255,.18); cursor:pointer; position:relative; box-shadow: 0 8px 20px rgba(0,0,0,.25); }
-    .c.sel::after{ content:""; position:absolute; inset:-3px; border-radius: 999px; border: 2px solid rgba(243,245,247,.85); }
+    .c{ width: 26px; height: 26px; border-radius: 999px; border:1px solid rgba(255,255,255,.18); cursor:pointer; }
+    .c.sel{ outline:2px solid rgba(243,245,247,.85); outline-offset:2px; }
 
     .groups{ display:flex; flex-direction:column; gap:12px; max-height: 56vh; overflow:auto; padding-right: 6px; }
 
     .g{ border-radius: var(--radius2); border:1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.18); overflow:hidden; }
     .gHd{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px; border-bottom:1px solid rgba(255,255,255,.10); flex-wrap:wrap; }
     .gTitle{ display:flex; align-items:center; gap:10px; min-width:0; }
-    .dot{ width:10px; height:10px; border-radius: 999px; border:1px solid rgba(255,255,255,.25); }
-    .gName{ font-weight: 860; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .dot{ width:10px; height:10px; border-radius:999px; border:1px solid rgba(255,255,255,.25); }
+    .gName{ font-weight:860; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .gSub{ color: var(--muted); font-size: 12px; margin-top:2px; }
     .gBd{ padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
     .gRow{
@@ -220,9 +215,9 @@
       cursor:pointer;
     }
     .gRow .left{ min-width:0; display:flex; flex-direction:column; gap:2px; }
-    .gRow .nm{ font-weight: 820; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .gRow .nm{ font-weight:820; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .gRow .sm{ color:var(--muted); font-size:12px; font-family: var(--mono); }
-    .gRow .pw{ font-family: var(--mono); font-weight: 900; }
+    .gRow .pw{ font-family: var(--mono); font-weight:900; }
 
     .ghost{
       color: var(--muted);
@@ -252,17 +247,16 @@
     dialog::backdrop{ background: rgba(0,0,0,.65); }
   </style>
 </head>
-
 <body>
   <div class="app">
     <div class="topbar">
       <div class="brand">
-        <h1>プレイヤー振り分けツール（Last Z）</h1>
-        <p class="sub">スクショを選択→端末内でOCR→戦力順で一覧→グループ分け→画像保存。</p>
+        <h1>Player Grouping Tool (Last Z)</h1>
+        <p class="sub">OCR is done locally in your browser. If names look wrong, tweak ROI constants near the top of the script.</p>
       </div>
       <div class="actions">
-        <button class="btn primary" id="btnExport" disabled type="button">グループを画像で保存</button>
-        <button class="btn danger" id="btnReset" type="button">全データ削除</button>
+        <button class="btn primary" id="btnExport" disabled type="button">Save groups as image</button>
+        <button class="btn danger" id="btnReset" type="button">Reset all</button>
       </div>
     </div>
 
@@ -270,22 +264,22 @@
       <div class="card">
         <div class="hd">
           <h2>Players</h2>
-          <div class="pill" id="pillCount">0 人</div>
+          <div class="pill" id="pillCount">0</div>
         </div>
         <div class="bd">
-          <div class="drop" id="drop">
+          <div class="drop">
             <input id="file" type="file" accept="image/*" multiple />
             <div class="left">
-              <div class="title" id="dropTitle">同盟メンバー画面のスクショを選択してください</div>
-              <div class="hint" id="dropHint">複数選択OK</div>
+              <div class="title">Upload member-list screenshots</div>
+              <div class="hint">We crop the list area and OCR each column.</div>
             </div>
-            <div class="pill" id="pickHint">タップして選択</div>
+            <div class="pill" id="pickHint">Tap to pick</div>
           </div>
 
           <div class="progress" id="progress">
             <div class="pTop">
-              <div id="pLabel">準備中…</div>
-              <div class="mono" id="pTime">開始: --:--:-- / 経過: 0.0s</div>
+              <div id="pLabel">Idle</div>
+              <div class="mono" id="pTime">--</div>
             </div>
             <div class="bar"><div class="fill" id="pAll"></div></div>
             <div class="pTop">
@@ -295,16 +289,16 @@
             <div class="bar"><div class="fill sub" id="pSub"></div></div>
           </div>
 
-          <div class="status" id="status">待機中</div>
+          <div class="status" id="status">Ready</div>
           <div class="log" id="log"></div>
 
           <div class="toolbar">
             <div class="left">
-              <input class="input" id="q" placeholder="名前で検索…" />
+              <input class="input" id="q" placeholder="Search name..." />
             </div>
             <div class="right">
-              <button class="btn" id="btnSelectNone" type="button">選択解除</button>
-              <button class="btn" id="btnAssign" disabled type="button">選択中を追加…</button>
+              <button class="btn" id="btnSelectNone" type="button">Clear selection</button>
+              <button class="btn" id="btnAssign" disabled type="button">Add to group...</button>
             </div>
           </div>
 
@@ -315,19 +309,19 @@
       <div class="card">
         <div class="hd">
           <h2>Groups</h2>
-          <div class="pill" id="pillGroup">0 グループ</div>
+          <div class="pill" id="pillGroup">0</div>
         </div>
         <div class="bd">
           <div class="groupForm">
-            <input class="input" id="groupName" placeholder="グループ名（例：第一部隊）" />
-            <button class="btn primary" id="btnCreate" type="button">グループ作成</button>
+            <input class="input" id="groupName" placeholder="Group name (e.g., Team A)" />
+            <button class="btn primary" id="btnCreate" type="button">Create</button>
           </div>
 
           <div class="colors" id="colors"></div>
 
           <div class="captureWrap">
             <div class="captureTitle">
-              <span>このエリアが画像出力されます</span>
+              <span>This area is exported</span>
               <span class="pill">PNG</span>
             </div>
             <div id="capture">
@@ -340,27 +334,31 @@
 
     <dialog id="dlg" style="border:none;border-radius:18px; padding:0; background: rgba(10,12,16,.95); color: var(--text); box-shadow: var(--shadow); width:min(560px, 92vw);">
       <div style="padding:16px 16px 12px; border-bottom:1px solid rgba(255,255,255,.12); display:flex; justify-content:space-between; align-items:center; gap:10px;">
-        <div style="font-weight:850; letter-spacing:.02em;">追加先グループを選択</div>
-        <button class="btn" id="btnClose" type="button">閉じる</button>
+        <div style="font-weight:850;">Select target group</div>
+        <button class="btn" id="btnClose" type="button">Close</button>
       </div>
       <div id="dlgBody" style="padding:14px 16px; display:flex; flex-direction:column; gap:10px;"></div>
     </dialog>
   </div>
 
 <script>
-  // ===== OCR tuning (English usernames) =====
-  // PSM tuning can change results dramatically [web:184][web:183]
-  const PSM_MODE = Tesseract.PSM?.SINGLE_BLOCK ?? 6; // SINGLE_BLOCK ~= 6 [web:184]
-  // Disabling dictionaries helps for non-words/usernames [web:153]
+  // ======= YOU MAY NEED TO TWEAK THESE 3 (once) =======
+  // Crop a central region where the member list exists.
+  const ROI_TOP = 0.18;      // start Y (fraction of height)
+  const ROI_BOTTOM = 0.92;   // end Y
+  const ROI_LEFT = 0.06;     // start X
+  const ROI_RIGHT = 0.94;    // end X
+  const SPLIT_X = 0.50;      // column split (fraction of ROI width)
+
+  // OCR settings
+  const PSM = Tesseract.PSM?.SPARSE_TEXT ?? 11; // sparse text helps UI layouts [web:189][web:183]
   const OCR_PARAMS = {
-    tessedit_pageseg_mode: PSM_MODE,
+    tessedit_pageseg_mode: PSM,
     load_system_dawg: "0",
     load_freq_dawg: "0"
   };
 
-  const LS_KEY = "lz_player_groups_full_groups_enabled";
-  let state = load() ?? { players: [], groups: [], color: "#46e6a3", selected: new Set() };
-
+  const LS_KEY = "lz_groups_roi_split";
   const palette = ["#ff5a6a","#ffb86b","#fee140","#46e6a3","#5aa9ff","#c471f5"];
 
   const $ = (s)=>document.querySelector(s);
@@ -392,12 +390,12 @@
   const dlgBody = $("#dlgBody");
   const btnClose = $("#btnClose");
 
+  let state = load() ?? { players: [], groups: [], color: palette[3], selected: new Set() };
   let busy = false;
   let t0 = 0;
   let timerHandle = null;
-
-  let lastErrorKey = "";
-  let lastLogLine = "";
+  let lastLog = "";
+  let lastErrKey = "";
 
   renderPalette();
   renderAll();
@@ -413,21 +411,20 @@
   q.addEventListener("input", ()=> renderPlayers());
 
   btnReset.addEventListener("click", ()=>{
-    if(!confirm("全データ（プレイヤー/グループ）を削除します。よろしいですか？")) return;
+    if(!confirm("Reset all players/groups?")) return;
     state = { players:[], groups:[], color: palette[3], selected:new Set() };
     save(); renderAll();
-    setStatus("待機中", false);
+    setStatus("Ready", false);
     setLog("", false, true);
   });
 
   btnCreate.addEventListener("click", ()=>{
     const name = $("#groupName").value.trim();
-    if(!name) return alert("グループ名を入力してください。");
+    if(!name) return alert("Enter group name.");
     const g = { id: Date.now(), name, color: state.color, memberIds: [] };
     state.groups.unshift(g);
     $("#groupName").value = "";
-    save();
-    renderGroups();
+    save(); renderGroups();
   });
 
   btnSelectNone.addEventListener("click", ()=>{
@@ -437,7 +434,7 @@
 
   btnAssign.addEventListener("click", ()=>{
     if(state.selected.size === 0) return;
-    if(state.groups.length === 0) return alert("先にグループを作成してください。");
+    if(state.groups.length === 0) return alert("Create a group first.");
     openAssignDialog();
   });
 
@@ -460,40 +457,38 @@
   async function ingestFiles(files){
     setBusy(true);
     beginProgress();
-    setStatus(`OCR中…（${files.length}枚）`, true);
+    setStatus(`OCR... (${files.length} images)`, true);
     setLog("", true, true);
 
     for(let i=0;i<files.length;i++){
-      setOverall(i, files.length, `画像 ${i+1}/${files.length} を処理中…`);
+      setOverall(i, files.length, `Processing ${i+1}/${files.length}...`);
 
       const dataUrl = await readAsDataURL(files[i]);
 
-      setSub(0.08, "前処理（2x拡大 + グレースケール）…");
-      const pre = await preprocessToDataURL(dataUrl);
+      setSub(0.05, "Preprocess (2x + grayscale)...");
+      const pre = await preprocessToCanvas(dataUrl);
 
-      setSub(0.18, "OCR 実行中…");
-      let text = "";
-      try{
-        text = await runOCRMainThread(pre);
-      }catch(e){
-        const detail = formatErrorDetail(e);
-        logErrorOnce("recognize", detail);
-        setStatus("OCRに失敗しました（ネットワーク制限の可能性）", false);
-        continue;
-      }
+      setSub(0.15, "Crop ROI + split columns...");
+      const { leftCanvas, rightCanvas } = cropAndSplit(pre);
 
-      setSub(0.92, "抽出（名前 / 戦力）…");
-      const extracted = extractPlayersFromText(text);
+      setSub(0.25, "OCR left column...");
+      const leftText = await ocrCanvas(leftCanvas);
 
-      addLogLine(`抽出件数: ${extracted.length}\nOCR先頭160文字:\n${text.slice(0,160)}\n---\n`);
+      setSub(0.60, "OCR right column...");
+      const rightText = await ocrCanvas(rightCanvas);
+
+      setSub(0.92, "Extract players...");
+      const extracted = [
+        ...extractPlayersFromText(leftText),
+        ...extractPlayersFromText(rightText),
+      ];
+
+      addLog(`Extracted: ${extracted.length}\nLeft head:\n${leftText.slice(0,160)}\nRight head:\n${rightText.slice(0,160)}\n---\n`);
 
       for(const p of extracted){
         const exists = state.players.find(x => x.name === p.name);
         if(exists){
-          if(p.power > exists.power){
-            exists.power = p.power;
-            exists.powerRaw = p.powerRaw;
-          }
+          if(p.power > exists.power){ exists.power = p.power; exists.powerRaw = p.powerRaw; }
         }else{
           state.players.push(p);
         }
@@ -502,20 +497,20 @@
       save(); renderAll();
     }
 
-    setOverall(files.length, files.length, "完了");
-    setSub(1, "完了");
-    setStatus("完了。", false);
+    setOverall(files.length, files.length, "Done");
+    setSub(1, "Done");
+    setStatus("Done.", false);
     endProgress();
     setBusy(false);
   }
 
-  async function runOCRMainThread(dataUrl){
+  async function ocrCanvas(canvas){
     let last = 0;
-    const { data } = await Tesseract.recognize(dataUrl, "eng", {
+    const { data } = await Tesseract.recognize(canvas, "eng", {
       logger: m => {
         if(m && typeof m.progress === "number"){
           last = Math.max(last, m.progress);
-          setSub(0.18 + last*0.74, `OCR 実行中… ${(last*100).toFixed(0)}%`);
+          setSub(0.25 + last*0.33, `OCR... ${(last*100).toFixed(0)}%`);
         }
       },
       ...OCR_PARAMS
@@ -523,68 +518,42 @@
     return data.text || "";
   }
 
-  // ====== Extraction ======
-  function extractPlayersFromText(text){
-    const lines = text.split("\n").map(s=>s.trim()).filter(Boolean);
-    const players = [];
-    const seen = new Set();
-    let unk = 1;
+  // ======= Key improvement: OCR only ROI (cropping improves OCR) [web:82] =======
+  function cropAndSplit(canvas){
+    const w = canvas.width, h = canvas.height;
+    const x0 = Math.floor(w * ROI_LEFT);
+    const x1 = Math.floor(w * ROI_RIGHT);
+    const y0 = Math.floor(h * ROI_TOP);
+    const y1 = Math.floor(h * ROI_BOTTOM);
 
-    for(const line of lines){
-      const powerMatch = line.match(/(\d{1,4}(?:\.\d{1,2})?)\s*([KMB])/i);
-      if(!powerMatch) continue;
+    const rw = Math.max(1, x1 - x0);
+    const rh = Math.max(1, y1 - y0);
 
-      const powerRaw = `${powerMatch[1]}${powerMatch[2].toUpperCase()}`;
-      const power = parseCompactNumber(powerRaw);
+    const roi = document.createElement("canvas");
+    roi.width = rw; roi.height = rh;
+    roi.getContext("2d").drawImage(canvas, x0, y0, rw, rh, 0, 0, rw, rh);
 
-      let name = line.replace(powerMatch[0], " ").replace(/\s+/g," ").trim();
+    const sx = Math.floor(rw * SPLIT_X);
 
-      // Sanity filter: if OCR spits mostly symbols, mark unknown
-      const cleaned = name.replace(/[^A-Za-z0-9_.-]+/g,"");
-      const looksBad = cleaned.length < 2 || cleaned.length / Math.max(1, name.length) < 0.45;
-      if(looksBad) name = `Unknown ${unk++}`;
+    const left = document.createElement("canvas");
+    left.width = sx; left.height = rh;
+    left.getContext("2d").drawImage(roi, 0, 0, sx, rh, 0, 0, sx, rh);
 
-      // Dedup
-      if(seen.has(name)) continue;
-      seen.add(name);
+    const right = document.createElement("canvas");
+    right.width = rw - sx; right.height = rh;
+    right.getContext("2d").drawImage(roi, sx, 0, rw - sx, rh, 0, 0, rw - sx, rh);
 
-      players.push({
-        id: Date.now() + Math.floor(Math.random()*1e6),
-        name,
-        hq: 0,
-        power,
-        powerRaw,
-        iconDataUrl: ""
-      });
-    }
-    return players;
+    return { leftCanvas: left, rightCanvas: right };
   }
 
-  function parseCompactNumber(s){
-    const m = String(s).toUpperCase().match(/(\d+(?:\.\d+)?)([KMB])/);
-    if(!m) return 0;
-    const n = parseFloat(m[1]);
-    const u = m[2];
-    const mult = u === "K" ? 1e3 : u === "M" ? 1e6 : 1e9;
-    return Math.round(n * mult);
-  }
-
-  function formatCompact(n){
-    if(n >= 1e9) return (n/1e9).toFixed(2)+"B";
-    if(n >= 1e6) return (n/1e6).toFixed(1)+"M";
-    if(n >= 1e3) return (n/1e3).toFixed(1)+"K";
-    return String(n);
-  }
-
-  // ===== Preprocess: upscale + grayscale (avoid hard threshold) [web:153] =====
-  async function preprocessToDataURL(dataUrl){
+  // ======= Preprocess: 2x upscale + grayscale (no threshold) =======
+  async function preprocessToCanvas(dataUrl){
     const { canvas } = await dataUrlToCanvas(dataUrl);
 
     const scale = 2;
     const up = document.createElement("canvas");
     up.width = Math.floor(canvas.width * scale);
     up.height = Math.floor(canvas.height * scale);
-
     const uctx = up.getContext("2d", { willReadFrequently: true });
     uctx.imageSmoothingEnabled = true;
     uctx.imageSmoothingQuality = "high";
@@ -593,20 +562,72 @@
     const ctx = up.getContext("2d", { willReadFrequently: true });
     const imgData = ctx.getImageData(0,0,up.width,up.height);
     const d = imgData.data;
-
     for(let i=0;i<d.length;i+=4){
       const gray = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
       d[i]=d[i+1]=d[i+2]=gray;
     }
     ctx.putImageData(imgData,0,0);
-    return up.toDataURL("image/png");
+    return up;
   }
 
-  // ===== UI / Render =====
+  // ======= Extract players anchored by power token =======
+  function extractPlayersFromText(text){
+    const lines = text.split("\n").map(s=>s.trim()).filter(Boolean);
+    const out = [];
+    const seen = new Set();
+
+    for(const line of lines){
+      const m = line.match(/(\d{1,4}(?:\.\d{1,2})?)\s*([KMB])/i);
+      if(!m) continue;
+
+      const powerRaw = `${m[1]}${m[2].toUpperCase()}`;
+      const power = parseCompactNumber(powerRaw);
+
+      // name is the part before power token
+      let name = line.slice(0, m.index).replace(/\s+/g," ").trim();
+
+      // sanity filter: keep typical username charset; else skip
+      if(!/^[A-Za-z0-9._\- ]{2,28}$/.test(name)){
+        // try salvage by stripping bad chars
+        const salvaged = name.replace(/[^A-Za-z0-9._\- ]+/g,"").trim();
+        if(/^[A-Za-z0-9._\- ]{2,28}$/.test(salvaged)) name = salvaged;
+        else continue;
+      }
+
+      if(seen.has(name)) continue;
+      seen.add(name);
+
+      out.push({
+        id: Date.now() + Math.floor(Math.random()*1e6),
+        name,
+        hq: 0,
+        power,
+        powerRaw,
+        iconDataUrl: ""
+      });
+    }
+    return out;
+  }
+
+  function parseCompactNumber(s){
+    const m = String(s).toUpperCase().match(/(\d+(?:\.\d+)?)([KMB])/);
+    if(!m) return 0;
+    const n = parseFloat(m[1]);
+    const mult = m[2]==="K" ? 1e3 : m[2]==="M" ? 1e6 : 1e9;
+    return Math.round(n * mult);
+  }
+  function formatCompact(n){
+    if(n >= 1e9) return (n/1e9).toFixed(2)+"B";
+    if(n >= 1e6) return (n/1e6).toFixed(1)+"M";
+    if(n >= 1e3) return (n/1e3).toFixed(1)+"K";
+    return String(n);
+  }
+
+  // ===== UI render =====
   function renderAll(){ renderPlayers(); renderGroups(); renderCounts(); syncButtons(); }
   function renderCounts(){
-    pillCount.textContent = `${state.players.length} 人`;
-    pillGroup.textContent = `${state.groups.length} グループ`;
+    pillCount.textContent = `${state.players.length} players`;
+    pillGroup.textContent = `${state.groups.length} groups`;
   }
 
   function renderPlayers(){
@@ -616,7 +637,7 @@
       .sort((a,b)=> b.power - a.power);
 
     if(list.length === 0){
-      playerList.innerHTML = `<div class="ghost">プレイヤーがまだいません。スクショを選択してください。</div>`;
+      playerList.innerHTML = `<div class="ghost">No players yet. Upload a screenshot.</div>`;
       return;
     }
 
@@ -627,9 +648,7 @@
           <img class="avatar" src="${placeholderAvatar()}" alt="">
           <div class="meta">
             <div class="name">${escapeHtml(p.name)}</div>
-            <div class="stats">
-              <span class="tag">戦力 ${escapeHtml(p.powerRaw || String(p.power))}</span>
-            </div>
+            <div class="stats"><span class="tag">Power ${escapeHtml(p.powerRaw)}</span></div>
           </div>
           <div class="power">${formatCompact(p.power)}</div>
         </div>
@@ -648,7 +667,7 @@
 
   function renderGroups(){
     if(state.groups.length === 0){
-      groupList.innerHTML = `<div class="ghost">グループがまだありません。右上のフォームから作成してください。</div>`;
+      groupList.innerHTML = `<div class="ghost">No groups yet. Create one.</div>`;
       btnExport.disabled = true;
       return;
     }
@@ -660,10 +679,10 @@
       const rows = members
         .sort((a,b)=> b.power - a.power)
         .map(p => `
-          <div class="gRow" data-pid="${p.id}" data-gid="${g.id}" title="タップでこのグループから外す">
+          <div class="gRow" data-pid="${p.id}" data-gid="${g.id}" title="Tap to remove from this group">
             <div class="left">
               <div class="nm">${escapeHtml(p.name)}</div>
-              <div class="sm">戦力 ${escapeHtml(p.powerRaw)} / ${formatCompact(p.power)}</div>
+              <div class="sm">Power ${escapeHtml(p.powerRaw)} / ${formatCompact(p.power)}</div>
             </div>
             <div class="pw">${formatCompact(p.power)}</div>
           </div>
@@ -676,19 +695,18 @@
               <span class="dot" style="background:${g.color}"></span>
               <div style="min-width:0">
                 <div class="gName">${escapeHtml(g.name)}</div>
-                <div class="gSub">${members.length}人 / 合計 ${formatCompact(total)}</div>
+                <div class="gSub">${members.length} / Total ${formatCompact(total)}</div>
               </div>
             </div>
-            <button class="btn danger" data-delgid="${g.id}" type="button">削除</button>
+            <button class="btn danger" data-delgid="${g.id}" type="button">Delete</button>
           </div>
           <div class="gBd">
-            ${rows || `<div class="ghost" style="padding:12px;">メンバーがいません。「選択中を追加…」で入れてください。</div>`}
+            ${rows || `<div class="ghost" style="padding:12px;">No members yet. Select players and “Add to group”.</div>`}
           </div>
         </div>
       `;
     }).join("");
 
-    // remove member by tapping
     [...groupList.querySelectorAll(".gRow")].forEach(el=>{
       el.addEventListener("click", ()=>{
         const pid = Number(el.dataset.pid);
@@ -700,12 +718,11 @@
       }, { passive:true });
     });
 
-    // delete group
     [...groupList.querySelectorAll("button[data-delgid]")].forEach(btn=>{
       btn.addEventListener("click", (e)=>{
         e.stopPropagation();
         const gid = Number(btn.dataset.delgid);
-        if(!confirm("このグループを削除します。よろしいですか？")) return;
+        if(!confirm("Delete this group?")) return;
         state.groups = state.groups.filter(x=>x.id!==gid);
         save(); renderGroups(); syncButtons();
       });
@@ -719,7 +736,6 @@
     btnExport.disabled = state.groups.length === 0;
   }
 
-  // ===== Assign dialog =====
   function openAssignDialog(){
     dlgBody.innerHTML = state.groups.map(g=> `
       <button class="btn primary" style="justify-content:space-between;" data-gid="${g.id}" type="button">
@@ -727,7 +743,7 @@
           <span style="width:10px;height:10px;border-radius:999px;background:${g.color};border:1px solid rgba(255,255,255,.25);"></span>
           <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(g.name)}</span>
         </span>
-        <span class="pill">${g.memberIds.length}人</span>
+        <span class="pill">${g.memberIds.length}</span>
       </button>
     `).join("");
 
@@ -758,7 +774,6 @@
     save(); renderPlayers(); renderGroups(); syncButtons();
   }
 
-  // ===== Palette =====
   function renderPalette(){
     const wrap = $("#colors");
     if(!palette.includes(state.color)) state.color = palette[3];
@@ -768,23 +783,22 @@
     });
   }
 
-  // ===== Progress / Status / Log =====
+  // ===== progress/status/log =====
   function setBusy(v){
     busy = v;
     file.disabled = v;
-    $("#pickHint").textContent = v ? "処理中…" : "タップして選択";
+    $("#pickHint").textContent = v ? "Processing..." : "Tap to pick";
   }
   function beginProgress(){
     t0 = performance.now();
     progressEl.classList.add("show");
-    setOverall(0,1,"準備中…");
+    setOverall(0,1,"Starting...");
     setSub(0,"-");
     if(timerHandle) clearInterval(timerHandle);
     timerHandle = setInterval(()=>{
       const sec = (performance.now() - t0)/1000;
-      const now = new Date();
-      pTime.textContent = `開始: ${now.toTimeString().slice(0,8)} / 経過: ${sec.toFixed(1)}s`;
-    }, 150);
+      pTime.textContent = `Elapsed ${sec.toFixed(1)}s`;
+    }, 200);
   }
   function endProgress(){
     if(timerHandle){ clearInterval(timerHandle); timerHandle = null; }
@@ -810,30 +824,20 @@
     else if(msg) logEl.textContent += msg;
     logEl.classList.toggle("show", !!show);
   }
-  function addLogLine(line){
-    const s = String(line);
-    if(s === lastLogLine) return;
-    lastLogLine = s;
+  function addLog(msg){
+    const s = String(msg);
+    if(s === lastLog) return;
+    lastLog = s;
     setLog(s, true, false);
   }
   function logErrorOnce(tag, detail){
     const key = tag + ":" + String(detail).slice(0, 120);
-    if(key === lastErrorKey) return;
-    lastErrorKey = key;
-    addLogLine(`ERROR(${tag}):\n${detail}\n`);
-  }
-  function formatErrorDetail(e){
-    if(e === undefined) return "undefined";
-    if(e === null) return "null";
-    if(typeof e === "string") return e;
-    try{
-      return JSON.stringify({ name:e.name, message:e.message, stack:e.stack }, null, 2);
-    }catch(_){
-      return String(e);
-    }
+    if(key === lastErrKey) return;
+    lastErrKey = key;
+    addLog(`ERROR(${tag}):\n${detail}\n`);
   }
 
-  // ===== Storage =====
+  // ===== storage/helpers =====
   function save(){
     const plain = { ...state, selected: [...state.selected] };
     localStorage.setItem(LS_KEY, JSON.stringify(plain));
@@ -846,7 +850,6 @@
     return obj;
   }
 
-  // ===== Helpers =====
   function readAsDataURL(f){
     return new Promise((res, rej)=>{
       const r = new FileReader();
@@ -867,6 +870,7 @@
       img.src = dataUrl;
     });
   }
+
   function placeholderAvatar(){
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120">
       <rect width="120" height="120" rx="22" fill="#0b0d12"/>
