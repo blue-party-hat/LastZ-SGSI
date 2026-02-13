@@ -89,7 +89,6 @@
       white-space:nowrap;
     }
 
-    /* Upload (mobile-safe) */
     .drop{
       border: 1px dashed rgba(207,214,222,.35);
       background: rgba(255,255,255,.03);
@@ -99,28 +98,16 @@
       align-items:center;
       justify-content:space-between;
       gap:12px;
-      cursor:pointer;
-      transition: border-color .12s ease, background .12s ease;
       position: relative;
       min-height: 64px;
     }
-    .drop:hover{ border-color: rgba(207,214,222,.55); background: rgba(255,255,255,.05); }
     .drop.dragover{ border-color: rgba(207,214,222,.75); background: rgba(255,255,255,.06); }
     .drop .left{ display:flex; flex-direction:column; gap:4px; }
     .drop .title{ font-weight: 800; }
     .drop .hint{ color:var(--muted); font-size: 12px; }
 
-    /* iOS対策: inputは完全hiddenにしない */
-    #file{
-      position:absolute;
-      inset:0;
-      opacity:0;
-      width:100%;
-      height:100%;
-      cursor:pointer;
-    }
+    #file{ position:absolute; inset:0; opacity:0; width:100%; height:100%; cursor:pointer; }
 
-    /* Progress */
     .progress{
       margin-top:10px;
       border:1px solid var(--stroke);
@@ -131,26 +118,10 @@
       gap:10px;
     }
     .progress.show{ display:grid; }
-    .pTop{
-      display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
-      color: var(--muted); font-size: 12px;
-    }
-    .bar{
-      height:10px;
-      border-radius: 999px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.20);
-      overflow:hidden;
-    }
-    .fill{
-      height:100%;
-      width:0%;
-      background: linear-gradient(90deg, rgba(207,214,222,.90), rgba(255,255,255,.55));
-      transition: width .15s ease;
-    }
-    .fill.sub{
-      background: linear-gradient(90deg, rgba(70,230,163,.85), rgba(207,214,222,.55));
-    }
+    .pTop{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; color: var(--muted); font-size: 12px; }
+    .bar{ height:10px; border-radius: 999px; border:1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.20); overflow:hidden; }
+    .fill{ height:100%; width:0%; background: linear-gradient(90deg, rgba(207,214,222,.90), rgba(255,255,255,.55)); transition: width .15s ease; }
+    .fill.sub{ background: linear-gradient(90deg, rgba(70,230,163,.85), rgba(207,214,222,.55)); }
     .mono{ font-family: var(--mono); }
 
     .status{
@@ -163,6 +134,20 @@
       font-size: 12px;
     }
     .status.show{ display:block; }
+
+    .log{
+      margin-top:10px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      border-radius: 14px;
+      padding:10px 12px;
+      color: rgba(243,245,247,.78);
+      font-size: 12px;
+      display:none;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .log.show{ display:block; }
 
     .toolbar{
       display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between;
@@ -194,9 +179,8 @@
       border:1px solid rgba(255,255,255,.10);
       background: rgba(0,0,0,.18);
       cursor:pointer;
-      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+      transition: border-color .12s ease, background .12s ease;
     }
-    .row:hover{ transform: translateY(-1px); border-color: rgba(207,214,222,.26); background: rgba(255,255,255,.05); }
     .row.selected{ border-color: rgba(207,214,222,.55); background: rgba(207,214,222,.10); }
     .avatar{ width:54px; height:54px; border-radius: 14px; border:1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); object-fit: cover; }
     .meta{ display:flex; flex-direction:column; gap:6px; min-width:0; }
@@ -204,10 +188,6 @@
     .stats{ display:flex; gap:8px; flex-wrap:wrap; color: var(--muted); font-size: 12px; align-items:center; }
     .tag{ border:1px solid var(--stroke); background: rgba(255,255,255,.04); padding:3px 8px; border-radius: 999px; font-family: var(--mono); font-size: 12px; color: rgba(243,245,247,.84); }
     .power{ font-family: var(--mono); font-weight: 900; letter-spacing:.02em; color: var(--silver); text-align:right; min-width: 96px; }
-    @media (max-width: 420px){
-      .row{ grid-template-columns: 48px 1fr; }
-      .power{ grid-column: 2; text-align:left; min-width: unset; }
-    }
 
     .groupForm{
       display:grid;
@@ -221,10 +201,9 @@
       .groupForm .btn{ width:100%; justify-content:center; }
     }
 
-    /* 6 colors only */
     .colors{ display:flex; gap:10px; flex-wrap:wrap; margin: 10px 0 12px; }
     .c{ width: 26px; height: 26px; border-radius: 999px; border:1px solid rgba(255,255,255,.18); cursor:pointer; position:relative; box-shadow: 0 8px 20px rgba(0,0,0,.25); }
-    .c.sel::after{ content:""; position:absolute; inset:-3px; border-radius: 999px; border: 2px solid rgba(243,245,247,.85); filter: drop-shadow(0 6px 12px rgba(0,0,0,.35)); }
+    .c.sel::after{ content:""; position:absolute; inset:-3px; border-radius: 999px; border: 2px solid rgba(243,245,247,.85); }
 
     .groups{ display:flex; flex-direction:column; gap:12px; max-height: 56vh; overflow:auto; padding-right: 6px; }
     @media (min-width: 1101px){ .groups{ max-height: 620px; } }
@@ -236,13 +215,6 @@
     .gName{ font-weight: 860; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .gSub{ color: var(--muted); font-size: 12px; margin-top:2px; }
     .gBd{ padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
-
-    .m{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px; border-radius: 12px; border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.03); }
-    .mLeft{ display:flex; align-items:center; gap:10px; min-width:0; }
-    .mA{ width:34px; height:34px; border-radius: 10px; border:1px solid rgba(255,255,255,.14); object-fit: cover; background: rgba(255,255,255,.04); }
-    .mName{ font-weight: 720; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .mRight{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
-    .mini{ font-family: var(--mono); font-size: 12px; color: rgba(243,245,247,.82); }
 
     .ghost{
       color: var(--muted);
@@ -269,19 +241,6 @@
       flex-wrap:wrap;
     }
 
-    .log{
-      margin-top:10px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.18);
-      border-radius: 14px;
-      padding:10px 12px;
-      color: rgba(243,245,247,.78);
-      font-size: 12px;
-      display:none;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-    .log.show{ display:block; }
     dialog::backdrop{ background: rgba(0,0,0,.65); }
   </style>
 </head>
@@ -294,8 +253,8 @@
         <p class="sub">同盟メンバー画面のスクショをアップロード→「名前 / HQ / 戦力」を抽出→戦力順→グループ分け→画像出力。</p>
       </div>
       <div class="actions">
-        <button class="btn primary" id="btnExport" disabled>グループを画像で保存</button>
-        <button class="btn danger" id="btnReset">全データ削除</button>
+        <button class="btn primary" id="btnExport" disabled type="button">グループを画像で保存</button>
+        <button class="btn danger" id="btnReset" type="button">全データ削除</button>
       </div>
     </div>
 
@@ -381,11 +340,10 @@
   </div>
 
 <script>
-  const LS_KEY = "lz_player_groups_v4";
-  let state = load() ?? { players: [], groups: [], color: "#cfd6de", selected: new Set() };
+  const LS_KEY = "lz_player_groups_latest";
+  let state = load() ?? { players: [], groups: [], color: "#46e6a3", selected: new Set() };
 
-  // 6色に削減（スマホで溢れない）
-  const palette = ["#cfd6de","#ffffff","#9aa3ad","#ff5a6a","#46e6a3","#5aa9ff"];
+  const palette = ["#ff5a6a","#ffb86b","#fee140","#46e6a3","#5aa9ff","#c471f5"];
 
   const $ = (s)=>document.querySelector(s);
   const drop = $("#drop");
@@ -420,9 +378,16 @@
   let t0 = 0;
   let timerHandle = null;
 
-  // Tesseract worker（使い回し）: 複数画像でcreate/terminateするのは非推奨 [page:1]
+  // workerBlobURL:false が解決になるケースあり [web:106]
+  const TESS_OPT = {
+    langPath: "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/lang-data",
+    corePath: "https://cdn.jsdelivr.net/npm/tesseract.js-core@5",
+    workerPath: "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js",
+    workerBlobURL: false
+  };
+
   let worker = null;
-  let workerReady = false;
+  let currentLang = "eng";
 
   renderPalette();
   renderAll();
@@ -447,9 +412,8 @@
 
   btnReset.addEventListener("click", ()=>{
     if(!confirm("全データ（プレイヤー/グループ）を削除します。よろしいですか？")) return;
-    state = { players:[], groups:[], color:"#cfd6de", selected:new Set() };
-    save();
-    renderAll();
+    state = { players:[], groups:[], color: palette[3], selected:new Set() };
+    save(); renderAll();
     setStatus("待機中", false);
     setLog("", false);
   });
@@ -465,10 +429,8 @@
   });
 
   btnSelectNone.addEventListener("click", ()=>{
-    state.selected.clear();
-    save();
-    renderPlayers();
-    syncButtons();
+    state.selected.clear(); save();
+    renderPlayers(); syncButtons();
   });
 
   btnAssign.addEventListener("click", ()=>{
@@ -502,42 +464,41 @@
     setLog("", false);
 
     try{
-      await ensureWorker(); // workerを再利用してセットアップ時間削減 [page:1]
+      await ensureWorker("eng");
+      setLog(`開始: ${new Date().toLocaleString()}\n`, true);
     }catch(e){
       endProgress();
-      setStatus("OCR準備に失敗しました。", false);
-      setLog(String(e?.message || e), true);
+      setStatus("OCR準備に失敗しました（ネットワーク/CORSの可能性）", false);
+      setLog(`\nERROR:\n${String(e?.message || e)}\n`, true);
       return;
     }
-
-    const startISO = new Date().toLocaleString();
-    setLog(`開始: ${startISO}\n`, true);
 
     for(let i=0;i<files.length;i++){
       setOverall(i, files.length, `画像 ${i+1}/${files.length} を処理中…`);
 
       const dataUrl = await readAsDataURL(files[i]);
 
-      // 前処理
       setSub(0.02, "前処理（2値化）…");
       const pre = await preprocessToDataURL(dataUrl);
 
-      // OCR
-      setSub(0.12, "OCR 実行中…（文字認識）");
+      setSub(0.10, "日本語言語データを準備…");
+      await maybeEnableJapanese();
+
+      setSub(0.15, "OCR 実行中…");
       const tImgStart = performance.now();
-      const { text, lastProgress } = await recognizeWithProgress(pre);
+      const { text, lastProgress, langUsed } = await recognizeWithProgress(pre);
       const tImgEnd = performance.now();
 
-      // 抽出
       setSub(0.92, "抽出（名前 / HQ / 戦力）…");
       const extracted = extractPlayersFromText(text);
 
       setLog(
         `\n---\n画像 ${i+1}/${files.length}\n` +
+        `使用言語: ${langUsed}\n` +
         `OCR時間: ${((tImgEnd - tImgStart)/1000).toFixed(1)}s\n` +
         `進捗最終: ${(lastProgress*100).toFixed(0)}%\n` +
         `抽出件数: ${extracted.length}\n` +
-        `OCRテキスト（先頭300文字）:\n${text.slice(0,300)}\n`,
+        `OCRテキスト（先頭250文字）:\n${text.slice(0,250)}\n`,
         true
       );
 
@@ -546,11 +507,9 @@
         continue;
       }
 
-      // アイコンサムネ（ヒューリスティック）
       setSub(0.97, "アイコン切り出し（推定）…");
       const withIcons = await attachIconsHeuristic(extracted, dataUrl);
 
-      // マージ＆ソート
       setSub(0.99, "一覧更新…");
       for(const p of withIcons){
         const exists = state.players.find(x => x.name === p.name);
@@ -573,43 +532,62 @@
     setOverall(files.length, files.length, "完了");
     setSub(1, "完了");
     setStatus("完了。", false);
-
-    const endISO = new Date().toLocaleString();
-    setLog(`\n終了: ${endISO}\n`, true);
-
+    setLog(`\n終了: ${new Date().toLocaleString()}\n`, true);
     endProgress();
   }
 
-  async function ensureWorker(){
-    if(worker && workerReady) return;
+  async function ensureWorker(lang){
+    if(worker && currentLang === lang) return;
+    if(worker){
+      try{ await worker.terminate(); }catch(_){}
+      worker = null;
+    }
 
-    setSub(0.01, "OCRエンジン準備…");
-    worker = await Tesseract.createWorker("eng+jpn", 1, {
-      langPath: "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/lang-data"
+    setSub(0.01, `OCRエンジン準備…（${lang}）`);
+    currentLang = lang;
+
+    worker = await Tesseract.createWorker(lang, 1, {
+      ...TESS_OPT,
+      logger: m => {
+        if(m && m.status){
+          if(typeof m.progress === "number"){
+            const p = Math.max(0, Math.min(1, m.progress));
+            setSub(0.01 + p*0.10, `${m.status}… ${(p*100).toFixed(0)}%`);
+          }else{
+            setSub(0.01, `${m.status}…`);
+          }
+        }
+      }
     });
 
     await worker.setParameters({
       tessedit_char_whitelist:
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-+_ぁあぃいぅうぇえぉおかがきぎくぐけげこごさざしじすずせぜそぞただちぢつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもやゆよらりるれろわをんー々ァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモヤユヨラリルレロワヲン・ 　"
     });
+  }
 
-    // progress callback
-    workerReady = true;
+  async function maybeEnableJapanese(){
+    if(currentLang.includes("jpn")) return;
+    try{
+      await ensureWorker("eng+jpn");
+    }catch(e){
+      setLog(`\nWARN: 日本語言語ロード失敗 → 英語のみで続行\n${String(e?.message || e)}\n`, true);
+      await ensureWorker("eng");
+    }
   }
 
   async function recognizeWithProgress(dataUrl){
     let last = 0;
-    // Tesseract.js logger で進捗を取る（0..1のような値が来ることがある）
+    const langUsed = currentLang;
     const logger = m => {
-      if(m && (m.progress ?? null) !== null && typeof m.progress === "number"){
+      if(m && typeof m.progress === "number"){
         last = Math.max(last, m.progress);
-        setSub(0.12 + (last * 0.78), `OCR 実行中… ${(last*100).toFixed(0)}%`);
+        setSub(0.15 + last*0.75, `OCR 実行中… ${(last*100).toFixed(0)}%`);
       }
     };
-    // set logger for this job
-    if(worker.setLogger) worker.setLogger(logger);
+    if(worker && worker.setLogger) worker.setLogger(logger);
     const { data } = await worker.recognize(dataUrl);
-    return { text: data.text || "", lastProgress: last };
+    return { text: data.text || "", lastProgress: last, langUsed };
   }
 
   function extractPlayersFromText(text){
@@ -631,8 +609,7 @@
         if(filtered.length) hq = filtered[filtered.length - 1];
       }
 
-      let namePart = line;
-      namePart = namePart.replace(powerMatch[0], " ");
+      let namePart = line.replace(powerMatch[0], " ");
       if(hq !== null) namePart = namePart.replace(new RegExp(`\\b${hq}\\b`), " ");
       namePart = namePart
         .replace(/\b(Online|ago|min|m|h)\b/gi," ")
@@ -666,7 +643,6 @@
     const mult = u === "K" ? 1e3 : u === "M" ? 1e6 : 1e9;
     return Math.round(n * mult);
   }
-
   function formatCompact(n){
     if(n >= 1e9) return (n/1e9).toFixed(2)+"B";
     if(n >= 1e6) return (n/1e6).toFixed(1)+"M";
@@ -694,8 +670,7 @@
       const crop = document.createElement("canvas");
       crop.width = avatarSize;
       crop.height = avatarSize;
-      const ctx = crop.getContext("2d");
-      ctx.drawImage(canvas, x, y, avatarSize, avatarSize, 0, 0, avatarSize, avatarSize);
+      crop.getContext("2d").drawImage(canvas, x, y, avatarSize, avatarSize, 0, 0, avatarSize, avatarSize);
       const iconDataUrl = crop.toDataURL("image/jpeg", 0.85);
 
       out.push({ ...players[i], iconDataUrl });
@@ -725,15 +700,15 @@
     progressEl.classList.add("show");
     setOverall(0,1,"準備中…");
     setSub(0,"-");
+    if(timerHandle) clearInterval(timerHandle);
     timerHandle = setInterval(()=>{
       const sec = (performance.now() - t0)/1000;
       const now = new Date();
       pTime.textContent = `開始: ${now.toTimeString().slice(0,8)} / 経過: ${sec.toFixed(1)}s`;
-    }, 120);
+    }, 150);
   }
   function endProgress(){
     if(timerHandle){ clearInterval(timerHandle); timerHandle = null; }
-    // 表示は残す（状況把握のため）。消したければここでremove。
   }
   function setOverall(i, n, label){
     const pct = n ? (i/n) : 0;
@@ -746,7 +721,6 @@
     pSubLabel.textContent = label;
     pSubPct.textContent = `${Math.round(p*100)}%`;
   }
-
   function setStatus(msg, busy){
     statusEl.textContent = msg;
     statusEl.classList.add("show");
@@ -771,6 +745,7 @@
 
   function renderPalette(){
     const wrap = $("#colors");
+    if(!palette.includes(state.color)) state.color = palette[3];
     wrap.innerHTML = palette.map(c=> `
       <div class="c ${state.color===c?"sel":""}" style="background:${c}" data-c="${c}" role="button" aria-label="色"></div>
     `).join("");
@@ -783,16 +758,12 @@
     });
   }
 
-  function renderAll(){
-    renderPlayers();
-    renderGroups();
-    renderCounts();
-    syncButtons();
-  }
+  function renderAll(){ renderPlayers(); renderGroups(); renderCounts(); syncButtons(); }
   function renderCounts(){
     pillCount.textContent = `${state.players.length} 人`;
     pillGroup.textContent = `${state.groups.length} グループ`;
   }
+
   function renderPlayers(){
     const query = q.value.trim().toLowerCase();
     const list = state.players
@@ -833,6 +804,7 @@
       }, { passive: true });
     });
   }
+
   function renderGroups(){
     if(state.groups.length === 0){
       groupList.innerHTML = `<div class="ghost">グループがまだありません。右上のフォームから作成してください。</div>`;
@@ -863,16 +835,16 @@
             ${members.length ? members.map(m=>{
               const icon = m.iconDataUrl || placeholderAvatar();
               return `
-                <div class="m">
-                  <div class="mLeft">
-                    <img class="mA" src="${icon}" alt="">
+                <div style="padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.10);background: rgba(255,255,255,.03); display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                  <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                    <img src="${icon}" alt="" style="width:34px;height:34px;border-radius:10px;border:1px solid rgba(255,255,255,.14);object-fit:cover;background: rgba(255,255,255,.04);">
                     <div style="min-width:0;">
-                      <div class="mName">${escapeHtml(m.name)}</div>
+                      <div style="font-weight:720;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(m.name)}</div>
                       <div class="gSub">HQ ${m.hq ?? 0} / 戦力 ${escapeHtml(m.powerRaw || formatCompact(m.power))}</div>
                     </div>
                   </div>
-                  <div class="mRight">
-                    <div class="mini">${formatCompact(m.power)}</div>
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+                    <div class="mono" style="font-size:12px; color: rgba(243,245,247,.82);">${formatCompact(m.power)}</div>
                     <button class="btn danger" data-act="rm" data-gid="${g.id}" data-pid="${m.id}" type="button">外す</button>
                   </div>
                 </div>
@@ -912,6 +884,7 @@
 
     btnExport.disabled = false;
   }
+
   function syncButtons(){
     btnAssign.disabled = state.selected.size === 0 || state.groups.length === 0;
     btnExport.disabled = state.groups.length === 0;
@@ -937,7 +910,6 @@
       });
     });
 
-    // Safari fallback
     if (typeof dlg.showModal === "function") dlg.showModal();
     else dlg.setAttribute("open", "");
   }
@@ -989,6 +961,125 @@
       <rect x="28" y="74" width="64" height="26" rx="13" fill="#cfd6de" opacity=".35"/>
     </svg>`;
     return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  }
+
+  function beginProgress(){
+    t0 = performance.now();
+    progressEl.classList.add("show");
+    setOverall(0,1,"準備中…");
+    setSub(0,"-");
+    if(timerHandle) clearInterval(timerHandle);
+    timerHandle = setInterval(()=>{
+      const sec = (performance.now() - t0)/1000;
+      const now = new Date();
+      pTime.textContent = `開始: ${now.toTimeString().slice(0,8)} / 経過: ${sec.toFixed(1)}s`;
+    }, 150);
+  }
+  function endProgress(){
+    if(timerHandle){ clearInterval(timerHandle); timerHandle = null; }
+  }
+  function setOverall(i, n, label){
+    const pct = n ? (i/n) : 0;
+    pAll.style.width = `${Math.max(0, Math.min(1, pct))*100}%`;
+    pLabel.textContent = label;
+  }
+  function setSub(pct, label){
+    const p = Math.max(0, Math.min(1, pct));
+    pSub.style.width = `${p*100}%`;
+    pSubLabel.textContent = label;
+    pSubPct.textContent = `${Math.round(p*100)}%`;
+  }
+  function setStatus(msg, busy){
+    statusEl.textContent = msg;
+    statusEl.classList.add("show");
+    statusEl.style.borderColor = busy ? "rgba(207,214,222,.22)" : "rgba(70,230,163,.25)";
+  }
+  function setLog(msg, show){
+    if(msg) logEl.textContent += msg;
+    logEl.classList.toggle("show", !!show);
+  }
+
+  function save(){
+    const plain = { ...state, selected: [...state.selected] };
+    localStorage.setItem(LS_KEY, JSON.stringify(plain));
+  }
+  function load(){
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return null;
+    const obj = JSON.parse(raw);
+    obj.selected = new Set(obj.selected || []);
+    return obj;
+  }
+
+  function renderPalette(){
+    const wrap = $("#colors");
+    if(!palette.includes(state.color)) state.color = palette[3];
+    wrap.innerHTML = palette.map(c=> `
+      <div class="c ${state.color===c?"sel":""}" style="background:${c}" data-c="${c}" role="button" aria-label="色"></div>
+    `).join("");
+    [...wrap.querySelectorAll(".c")].forEach(el=>{
+      el.addEventListener("click", ()=>{
+        state.color = el.dataset.c;
+        save();
+        renderPalette();
+      }, { passive: true });
+    });
+  }
+
+  function renderAll(){ renderPlayers(); renderGroups(); renderCounts(); syncButtons(); }
+  function renderCounts(){
+    pillCount.textContent = `${state.players.length} 人`;
+    pillGroup.textContent = `${state.groups.length} グループ`;
+  }
+
+  function renderPlayers(){
+    const query = q.value.trim().toLowerCase();
+    const list = state.players
+      .filter(p => !query || p.name.toLowerCase().includes(query))
+      .sort((a,b)=> b.power - a.power);
+
+    if(list.length === 0){
+      playerList.innerHTML = `<div class="ghost">プレイヤーがまだいません。スクショをアップロードしてください。</div>`;
+      return;
+    }
+
+    playerList.innerHTML = list.map(p=>{
+      const sel = state.selected.has(p.id) ? "selected" : "";
+      const icon = p.iconDataUrl || placeholderAvatar();
+      return `
+        <div class="row ${sel}" data-id="${p.id}">
+          <img class="avatar" src="${icon}" alt="">
+          <div class="meta">
+            <div class="name">${escapeHtml(p.name)}</div>
+            <div class="stats">
+              <span class="tag">HQ ${p.hq ?? 0}</span>
+              <span class="tag">戦力 ${escapeHtml(p.powerRaw || formatCompact(p.power))}</span>
+            </div>
+          </div>
+          <div class="power">${formatCompact(p.power)}</div>
+        </div>
+      `;
+    }).join("");
+
+    [...playerList.querySelectorAll(".row")].forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const id = Number(el.dataset.id);
+        if(state.selected.has(id)) state.selected.delete(id);
+        else state.selected.add(id);
+        save();
+        renderPlayers();
+        syncButtons();
+      }, { passive: true });
+    });
+  }
+
+  function renderGroups(){
+    if(state.groups.length === 0){
+      groupList.innerHTML = `<div class="ghost">グループがまだありません。右上のフォームから作成してください。</div>`;
+      btnExport.disabled = true;
+      return;
+    }
+    btnExport.disabled = false;
   }
 </script>
 </body>
